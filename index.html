@@ -206,15 +206,14 @@
   .log-card{
     border:1px solid var(--border); background:var(--panel); padding:24px;
     display:flex; flex-direction:column; gap:12px; min-height:180px;
+    transition:border-color .2s, transform .2s; cursor:pointer;
   }
+  .log-card:hover{border-color:var(--blue); transform:translateY(-4px);}
   .log-card .tag{font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:3px 8px; width:fit-content;}
   .log-card h3{font-size:16px; color:var(--text);}
   .log-card p{font-size:12.5px; color:var(--muted); flex:1;}
-  .log-card .date{font-size:11px; color:var(--muted);}
-  .empty-note{
-    grid-column:1/-1; text-align:center; padding:40px 20px; color:var(--muted);
-    border:1px dashed var(--border); font-size:13px;
-  }
+  .log-card .date{font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;}
+  .log-card .date .read{color:var(--blue-bright);}
 
   /* CONTACT */
   .contact-center{max-width:600px; margin:0 auto; text-align:center;}
@@ -426,19 +425,21 @@
   <div class="label"> // writeups</div>
   <h2 class="section-title">ls ./writeups</h2>
   <div class="log-grid">
-    <div class="empty-note">
-      &gt; no entries logged yet — first investigation write-up in progress.<br>
-      Check back soon, or replace this block with your case files.
-    </div>
+    <a class="log-card" href="writeups/case-001-phishing-rdp.html">
+      <span class="tag">DFIR</span>
+      <h3>Windows Forensics</h3>
+      <p>Manual triage image analysis reconstructing a full intrusion chain — from a malicious document through stager execution, timestamp manipulation, persistence, and RDP-based lateral movement.</p>
+      <span class="date">Aug&ndash;Sep 2022 <span class="read">read case ↗</span></span>
+    </a>
     <!--
-      When ready, replace the .empty-note div above with cards like this:
+      Add more write-ups by copying the block above, e.g.:
 
-      <div class="log-card">
+      <a class="log-card" href="writeups/your-file.html">
         <span class="tag">DFIR</span>
         <h3>Case Title</h3>
         <p>One or two line summary of the investigation.</p>
-        <span class="date">Month Year</span>
-      </div>
+        <span class="date">Month Year <span class="read">read case ↗</span></span>
+      </a>
     -->
   </div>
 </section>
