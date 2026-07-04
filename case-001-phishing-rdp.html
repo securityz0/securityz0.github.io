@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case 001: Windows Forensics | Alisson</title>
+<meta name="description" content="DFIR case study: manual triage image analysis reconstructing a phishing-to-RDP intrusion chain.">
+<style>
+  :root{
+    --bg:#05070d;
+    --panel:#0b0f1a;
+    --panel-2:#0e1420;
+    --border:#1c2536;
+    --border-bright:#2b3a52;
+    --blue:#3b82f6;
+    --blue-bright:#7cb2ff;
+    --text:#e6ecf5;
+    --muted:#65728a;
+    --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--mono);
+    line-height:1.7; overflow-x:hidden;
+  }
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+
+  .back{
+    display:inline-flex; align-items:center; gap:8px; font-size:13px;
+    color:var(--muted-2); margin-bottom:44px; transition:color .2s;
+  }
+  .back:hover{color:var(--blue-bright);}
+
+  .case-tag{
+    font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright);
+    border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;
+  }
+  h1{font-size:clamp(26px,4vw,40px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+
+  .meta-row{
+    display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px;
+    padding-bottom:26px; border-bottom:1px solid var(--border);
+  }
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{
+    font-size:11px; font-family:var(--mono); color:var(--blue-bright);
+    border:1px solid var(--border-bright); padding:2px 7px;
+  }
+
+  .exec-summary{
+    background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue);
+    padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);
+  }
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+
+  .toc{
+    border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;
+  }
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+
+  h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright);
+    margin:52px 0 20px; display:flex; align-items:center; gap:10px;
+  }
+  h2::before{content:"//"; color:var(--muted);}
+
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{
+    border-left:2px solid var(--blue); background:var(--panel);
+    padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;
+  }
+
+
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright);
+    background:var(--panel-2);
+  }
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+
+  .findings{list-style:none;}
+  .findings li{
+    position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);
+  }
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+
+  .chain{
+    display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);
+  }
+  .chain-step{
+    display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px;
+    border-bottom:1px solid var(--border);
+  }
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .chain-arrow{text-align:center; color:var(--muted); font-size:11px; padding:2px 0;}
+
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{
+    border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px;
+    color:var(--muted-2); margin-bottom:2px;
+  }
+  .note-line::before{content:"> "; color:var(--blue);}
+
+  .lessons{list-style:none;}
+  .lessons li{
+    position:relative; padding-left:22px; margin-bottom:10px; font-size:13.5px; color:var(--muted-2);
+  }
+  .lessons li::before{content:"—"; position:absolute; left:0; color:var(--muted);}
+
+  footer{
+    border-top:1px solid var(--border); margin-top:70px; padding-top:26px;
+    font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#writeups">&larr; back to portfolio</a>
+
+  <div class="case-tag">DFIR // IR Challenge</div>
+  <h1>Windows Forensics: Manual Triage Investigation</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">DFIR / IR Challenge</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Platform</div>
+      <div class="v">LetsDefend</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Investigation Window</div>
+      <div class="v">2022-08-21 &ndash; 2022-09-08</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Manual artifact analysis (Eric Zimmerman tools)</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1566 Phishing</span>
+        <span class="mitre-chip">T1059.003 Windows Command Shell</span>
+        <span class="mitre-chip">T1070.006 Timestomp</span>
+        <span class="mitre-chip">T1546.012 IFEO Injection</span>
+        <span class="mitre-chip">T1021.001 RDP</span>
+        <span class="mitre-chip">T1087 Account Discovery</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    A phishing email delivered a malicious document that led to execution of a stager on the host.
+    The attacker manipulated file timestamps to hinder analysis, established persistence through an
+    Image File Execution Options technique, and moved laterally via RDP. Post-exploitation activity
+    included account enumeration and privilege escalation consistent with Metasploit tooling. The host
+    remained under attacker control throughout the observed window.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+      <li><a href="#lessons">Lessons Learned</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    A targeted phishing campaign was carried out against the organization, and the phishing email had already
+    been opened on three systems across the network. A quick triage image was collected from one of the
+    infected hosts for identification of the attacker's tactics and techniques, so the incident response team
+    could respond and contain any further compromise.
+  </p>
+  <div class="callout">
+    This investigation was focused on manual artifact analysis using Eric Zimmerman's tools suite. Some
+    findings required additional research beyond standard artifact parsing.
+  </div>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Artifact</th><th>Source</th><th>Key Evidence</th><th>Why It Mattered</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Artifact">Shellbags</td>
+        <td data-label="Source" class="mono">[root]\Users\CyberJunkie\NTUSER.dat</td>
+        <td data-label="Key Evidence" class="mono">...\Downloads\MailDownloads</td>
+        <td data-label="Why">Revealed the path to the phishing document</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">Recycle Bin</td>
+        <td data-label="Source" class="mono">$Recycle.Bin\S-1-5-21-...-1001\$lWKWHDC</td>
+        <td data-label="Key Evidence" class="mono">Security Awareness.docx</td>
+        <td data-label="Why">Deleted phishing document was recovered</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">Prefetch</td>
+        <td data-label="Source" class="mono">[root]\Windows\Prefetch</td>
+        <td data-label="Key Evidence" class="mono">SECURITYPATCH.EXE</td>
+        <td data-label="Why">Confirmed the dropped stager was executed</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">$MFT</td>
+        <td data-label="Source" class="mono">[root]\Users\CyberJunkie\$MFT</td>
+        <td data-label="Key Evidence" class="mono">SECURITYPATCH.EXE</td>
+        <td data-label="Why">Timestamp had been altered by the attacker</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">Registry</td>
+        <td data-label="Source" class="mono">...\SilentProcessExit\explorer.exe</td>
+        <td data-label="Key Evidence" class="mono">GetPatch.exe</td>
+        <td data-label="Why">Explorer.exe was hijacked to execute the stager</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">RDP Cache</td>
+        <td data-label="Source" class="mono">...\Terminal Server Client\Cache</td>
+        <td data-label="Key Evidence" class="mono">bcache24.bmc, Cache0000.bin</td>
+        <td data-label="Why">Confirmed RDP lateral movement</td>
+      </tr>
+      <tr>
+        <td data-label="Artifact">System Logs</td>
+        <td data-label="Source" class="mono">\System32\winevt\Logs\System.evtx</td>
+        <td data-label="Key Evidence" class="mono">cmd.exe /c echo kyvckn &gt; \.\pipe\kyvckn</td>
+        <td data-label="Why">Indicated privilege escalation activity</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Time (UTC)</th><th>User</th><th>Event</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      <tr><td data-label="Time">2022-08-21 12:55:33</td><td data-label="User">Cyberjunkie</td><td data-label="Event">Directory access</td><td data-label="Source">Shellbags</td></tr>
+      <tr><td data-label="Time">2022-08-21 13:02:23</td><td data-label="User">Cyberjunkie</td><td data-label="Event">Timestamp modified</td><td data-label="Source">$MFT</td></tr>
+      <tr><td data-label="Time">2022-08-21 13:03:08</td><td data-label="User">Cyberjunkie</td><td data-label="Event">Process execution</td><td data-label="Source">Prefetch</td></tr>
+      <tr><td data-label="Time">2022-08-21 14:03:33</td><td data-label="User">Cyberjunkie</td><td data-label="Event">File deletion</td><td data-label="Source">Recycle Bin</td></tr>
+      <tr><td data-label="Time">2022-09-08 14:34:52</td><td data-label="User">Cyberjunkie</td><td data-label="Event">Persistence established</td><td data-label="Source">Registry</td></tr>
+      <tr><td data-label="Time">Unvalidated</td><td data-label="User">Cyberjunkie</td><td data-label="Event">Privilege escalation</td><td data-label="Source">System Logs</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>The compromise originated from a malicious phishing document delivered to the user.</li>
+    <li>A malicious stager identified as <span class="mono">SECURITYPATCH.EXE</span> was executed on the host.</li>
+    <li>Timestamp manipulation of the stager was identified, likely intended to hinder analysis.</li>
+    <li>Persistence was established via the GlobalFlags / SilentProcessExit technique using <span class="mono">GetPatch.exe</span>.</li>
+    <li>Command execution led to privilege escalation consistent with Metasploit framework activity.</li>
+    <li>Post-exploitation activity included account enumeration and use of <span class="mono">PowerView.ps1</span>.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Initial Access</div><div class="desc">Malicious document (Security Awareness.docx) delivered via phishing email.</div></div>
+    <div class="chain-step"><div class="stage">Execution</div><div class="desc">Opening the document triggered execution of a stager identified as SECURITYPATCH.EXE.</div></div>
+    <div class="chain-step"><div class="stage">Persistence</div><div class="desc">Configured through the GlobalFlags / SilentProcessExit technique to execute GetPatch.exe.</div></div>
+    <div class="chain-step"><div class="stage">Lateral Movement</div><div class="desc">RDP activity observed, alongside post-exploitation commands including net localgroup and PowerView.ps1.</div></div>
+    <div class="chain-step"><div class="stage">Privilege Escalation</div><div class="desc">Activity consistent with Metasploit-style named pipe usage via cmd.exe.</div></div>
+    <div class="chain-step"><div class="stage">Impact</div><div class="desc">Host remained under attacker control through persistence mechanisms and post-exploitation tooling.</div></div>
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Initial analysis focused on identifying the phishing document responsible for the compromise.</div>
+    <div class="note-line">Shellbags and Recycle Bin artifacts were correlated to confirm user interaction with the document.</div>
+    <div class="note-line">Prefetch analysis was used to identify the executable launched after document access.</div>
+    <div class="note-line">Timeline reconstruction revealed timestamp inconsistencies associated with SECURITYPATCH.EXE.</div>
+    <div class="note-line">Additional research was required to identify persistence through the GlobalFlags / SilentProcessExit technique.</div>
+    <div class="note-line">RDP cache artifacts and PowerView activity suggested post-exploitation actions beyond the initial compromise.</div>
+  </div>
+
+  <h2 id="lessons">Lessons Learned</h2>
+  <ul class="lessons">
+    <li>Correlating multiple artifacts provides stronger evidence than relying on a single source.</li>
+    <li>Timeline reconstruction can reveal inconsistencies that warrant further investigation.</li>
+    <li>Timestamp analysis should be validated across multiple artifacts before drawing conclusions.</li>
+    <li>Persistence mechanisms may not always be obvious and can require additional registry analysis.</li>
+  </ul>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#writeups">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
