@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" href="./favicon/favicon.ico">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portfolio | Alisson</title>
 <meta name="description" content="Alisson — Blue Team, DFIR, Detection Engineering &amp; Threat Hunting portfolio.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+<link rel="shortcut icon" href="favicon.ico">
 <style>
   :root{
     --bg:#05070d;
@@ -202,19 +206,51 @@
   .cert-card .verify{color:var(--muted-2); transition:color .2s;}
   .cert-card .verify:hover{color:var(--blue-bright);}
 
-  /* WRITEUPS / LOG */
-  .log-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
-  .log-card{
-    border:1px solid var(--border); background:var(--panel); padding:24px;
-    display:flex; flex-direction:column; gap:12px; min-height:180px;
-    transition:border-color .2s, transform .2s; cursor:pointer;
+  /* CASE STUDIES */
+  .featured-case{
+    border:1px solid var(--blue); background:linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
+    padding:38px; margin-bottom:22px; position:relative;
   }
-  .log-card:hover{border-color:var(--blue); transform:translateY(-4px);}
-  .log-card .tag{font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:3px 8px; width:fit-content;}
-  .log-card h3{font-size:16px; color:var(--text);}
-  .log-card p{font-size:12.5px; color:var(--muted); flex:1;}
-  .log-card .date{font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;}
-  .log-card .date .read{color:var(--blue-bright);}
+  .featured-tag{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright);
+    border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:18px;
+  }
+  .featured-case h3{font-size:clamp(20px,2.6vw,28px); color:var(--text); margin-bottom:14px; line-height:1.3;}
+  .featured-case p{font-size:14px; color:var(--muted-2); max-width:640px; margin-bottom:22px;}
+  .featured-case .read-link{
+    font-size:13px; color:var(--blue-bright); display:inline-flex; align-items:center; gap:6px;
+    transition:gap .2s;
+  }
+  .featured-case .read-link:hover{gap:10px;}
+
+  .case-divider{
+    text-align:center; font-size:11px; color:var(--muted); letter-spacing:.14em;
+    margin:44px 0 24px; text-transform:uppercase;
+  }
+
+  .case-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .case-card{
+    border:1px solid var(--border); background:var(--panel); padding:24px;
+    display:flex; flex-direction:column; gap:10px; min-height:150px;
+    transition:border-color .2s, transform .2s;
+  }
+  .case-card.linked{cursor:pointer;}
+  .case-card.linked:hover{border-color:var(--blue); transform:translateY(-4px);}
+  .case-card .cat{font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright);}
+  .case-card h4{font-size:15px; color:var(--text); flex:1; line-height:1.4;}
+  .case-card.soon h4{color:var(--muted); font-style:italic; font-weight:400;}
+  .case-card .read{font-size:11.5px; color:var(--blue-bright);}
+  .case-card .soon-tag{font-size:11px; color:var(--muted);}
+
+  .github-cta{
+    text-align:center; margin-top:40px; padding-top:32px; border-top:1px solid var(--border);
+  }
+  .github-cta p{font-size:13px; color:var(--muted); margin-bottom:10px;}
+  .github-cta a{
+    font-size:14px; color:var(--blue-bright); display:inline-flex; align-items:center; gap:6px;
+    transition:gap .2s;
+  }
+  .github-cta a:hover{gap:10px;}
 
   /* CONTACT */
   .contact-center{max-width:600px; margin:0 auto; text-align:center;}
@@ -261,11 +297,12 @@
     .about-grid{grid-template-columns:1fr;}
     .focus-grid{grid-template-columns:repeat(2,1fr);}
     .cert-grid{grid-template-columns:repeat(2,1fr);}
-    .log-grid{grid-template-columns:1fr;}
+    .case-grid{grid-template-columns:1fr;}
   }
   @media (max-width:520px){
     .focus-grid{grid-template-columns:1fr;}
     .cert-grid{grid-template-columns:1fr;}
+    .featured-case{padding:26px 22px;}
     section{padding:80px 6vw;}
   }
 
@@ -286,7 +323,7 @@
     <a href="#about">./about</a>
     <a href="#focus">./focus</a>
     <a href="#certs">./certs</a>
-    <a href="#writeups">./writeups</a>
+    <a href="#case-studies">./case-studies</a>
     <a href="#contact">./contact</a>
   </div>
 </nav>
@@ -312,7 +349,7 @@
 
   <div class="hero-cta">
     <a class="btn primary" href="#contact">./contact</a>
-    <a class="btn" href="#writeups">./view-writeups</a>
+    <a class="btn" href="#case-studies">./case-studies</a>
   </div>
 
   <div class="scroll-hint">scroll</div>
@@ -422,31 +459,76 @@
   </div>
 </section>
 
-<section id="writeups">
-  <div class="label"> // writeups</div>
-  <h2 class="section-title">ls ./writeups</h2>
-  <div class="log-grid">
-    <a class="log-card" href="./writeups/case-001-win-forensics.html">
-      <span class="tag">DFIR</span>
-      <h3>Windows Forensics</h3>
-      <p>Manual triage image analysis reconstructing a full intrusion chain — from a malicious document through stager execution, timestamp manipulation, persistence, and RDP-based lateral movement.</p>
-      <span class="date"><span class="read">read case ↗</span></span>
-    </a>
-    <!--
-      Add more write-ups by copying the block above, e.g.:
+<section id="case-studies">
+  <div class="label"> // case studies</div>
+  <h2 class="section-title">ls ./case-studies</h2>
 
-      <a class="log-card" href="writeups/your-file.html">
-        <span class="tag">DFIR</span>
-        <h3>Case Title</h3>
-        <p>One or two line summary of the investigation.</p>
-        <span class="date">Month Year <span class="read">read case ↗</span></span>
-      </a>
-    -->
+  <div class="featured-case">
+    <div class="featured-tag">Featured Case</div>
+    <h3>Windows Endpoint Compromise</h3>
+    <p>
+      Reconstructed a complete intrusion chain involving a malicious phishing document, stager execution,
+      timestamp manipulation, persistence via Image File Execution Options, and RDP-based lateral movement —
+      using manual forensic artifact analysis end to end.
+    </p>
+    <a class="read-link" href="writeups/case-001-win-forensics.html">Read Case &rarr;</a>
+  </div>
+
+  <div class="case-divider">// browse by specialization</div>
+
+  <div class="case-grid">
+    <a class="case-card linked" href="writeups/case-001-win-forensics.html">
+      <div class="cat">Digital Forensics</div>
+      <h4>Windows Endpoint Compromise</h4>
+      <span class="read">Read case ↗</span>
+    </a>
+    <div class="case-card soon">
+      <div class="cat">Threat Hunting</div>
+      <h4>PowerShell Threat Hunt</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Active Directory</div>
+      <h4>Golden Ticket Investigation</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Web Security</div>
+      <h4>Apache Tomcat RCE</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Malware</div>
+      <h4>Windows Defender Evasion</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Linux</div>
+      <h4>Linux Memory Forensics</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Detection Engineering</div>
+      <h4>Detecting LOLBIN Abuse</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+    <div class="case-card soon">
+      <div class="cat">Home SOC</div>
+      <h4>Architecture</h4>
+      <span class="soon-tag">Coming soon</span>
+    </div>
+  </div>
+
+  <div class="github-cta">
+    <p>Want to see more investigations?</p>
+    <a href="https://github.com/securityz0" target="_blank" rel="noopener">
+      View my complete investigation repository on GitHub ↗
+    </a>
   </div>
 </section>
 
 <section id="contact">
-  <div class="label" style="justify-content:center;"> // contact</div>
+  <div class="label" style="justify-content:center;">04 // contact</div>
   <div class="contact-center">
     <h2 class="section-title">./contact</h2>
     <p>
