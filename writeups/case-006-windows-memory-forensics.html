@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows Memory Forensics: Ransomware Delivery | Alisson</title>
+<meta name="description" content="Memory forensics case study: identifying a ransomware delivery chain and system modifications through Volatility analysis of a Windows memory dump.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#3b82f6; --blue-bright:#7cb2ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(26px,4vw,40px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  .lessons{list-style:none;}
+  .lessons li{position:relative; padding-left:22px; margin-bottom:10px; font-size:13.5px; color:var(--muted-2);}
+  .lessons li::before{content:"—"; position:absolute; left:0; color:var(--muted);}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Memory Forensics</div>
+  <h1>Windows Memory Forensics: Ransomware Delivery</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Memory Forensics</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Infected User</div>
+      <div class="v">flapjack</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Volatility memory analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1204.002 User Execution</span>
+        <span class="mitre-chip">T1105 Ingress Tool Transfer</span>
+        <span class="mitre-chip">T1486 Data Encrypted for Impact</span>
+        <span class="mitre-chip">T1112 Modify Registry</span>
+        <span class="mitre-chip">T1552 Unsecured Credentials</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    A Windows memory dump was analyzed to trace a ransomware infection to its source. The infected user
+    downloaded a fake software crack that retrieved a ransomware payload from a remote URL, which then
+    executed from the Temp directory and modified a system registry key. Volatility artifacts including
+    file scans, dumped executables, and string analysis were used to reconstruct the full delivery chain
+    and recover credentials relevant to the investigation.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+      <li><a href="#lessons">Lessons Learned</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    Investigate a Windows memory dump to identify the infected user, determine how ransomware was delivered,
+    locate the ransomware executable, and identify system modifications performed by the malware.
+  </p>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Source</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact" class="mono">windows.sessions</td><td data-label="Source">Volatility</td><td data-label="Why">Identified users present on the system</td></tr>
+      <tr><td data-label="Artifact" class="mono">windows.filescan</td><td data-label="Source">Volatility</td><td data-label="Why">Revealed suspicious files and ransomware location</td></tr>
+      <tr><td data-label="Artifact" class="mono">windows.dumpfiles</td><td data-label="Source">Volatility</td><td data-label="Why">Allowed extraction of suspicious executables</td></tr>
+      <tr><td data-label="Artifact" class="mono">Strings Analysis</td><td data-label="Source">Dumped files</td><td data-label="Why">Revealed URLs and registry modifications</td></tr>
+      <tr><td data-label="Artifact" class="mono">VirusTotal Behavior</td><td data-label="Source">Malware hash</td><td data-label="Why">Revealed registry modification activity</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>User</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="User">flapjack</td><td data-label="Event">Downloaded Windows10Crack.exe</td><td data-label="Source" class="mono">filescan</td></tr>
+      <tr><td data-label="User">flapjack</td><td data-label="Event">Ransomware payload retrieved from remote URL</td><td data-label="Source" class="mono">dumped file</td></tr>
+      <tr><td data-label="User">flapjack</td><td data-label="Event">XGUbdem0hd.exe present in Temp directory</td><td data-label="Source" class="mono">filescan</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>Four users were present on the system; the infected user was flapjack.</li>
+    <li>The ransomware was dropped by a fake crack tool, Windows10Crack.exe.</li>
+    <li>The ransomware payload was retrieved from http://48.147.154.231/XGUbdem0hd.exe.</li>
+    <li>The ransomware executable was located at virtual offset 0xe4870d737570.</li>
+    <li>The ransomware modified HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\LanmanWorkstation\Parameters.</li>
+    <li>A credential associated with "AdminRecovery" was recovered: K3ller!$Supp1y.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Execution</div><div class="desc">Windows10Crack.exe executed by the user.</div></div>
+    <div class="chain-step"><div class="stage">Payload Retrieval</div><div class="desc">XGUbdem0hd.exe downloaded from a remote URL.</div></div>
+    <div class="chain-step"><div class="stage">Execution</div><div class="desc">Ransomware executed from the Temp directory.</div></div>
+    <div class="chain-step"><div class="stage">System Modification</div><div class="desc">Registry key modified under LanmanWorkstation\Parameters.</div></div>
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Started by identifying users present on the system using windows.sessions.</div>
+    <div class="note-line">Pivoted to files within the Downloads directory to identify suspicious executables.</div>
+    <div class="note-line">Located Windows10Crack.exe and dumped the file for analysis.</div>
+    <div class="note-line">Used strings analysis and malware inspection to identify the ransomware download URL.</div>
+    <div class="note-line">Searched for additional files associated with the infected user and identified XGUbdem0hd.exe within the Temp directory.</div>
+    <div class="note-line">Used strings analysis and VirusTotal behavior information to identify the registry key modified by the ransomware.</div>
+  </div>
+
+  <h2 id="lessons">Lessons Learned</h2>
+  <ul class="lessons">
+    <li>windows.sessions can quickly identify users active on a system.</li>
+    <li>windows.filescan is useful for locating suspicious files within memory.</li>
+    <li>Dumped files can be analyzed with strings to identify URLs and malware behavior.</li>
+    <li>Registry modifications can sometimes be identified through malware behavior reports or embedded command strings.</li>
+  </ul>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>

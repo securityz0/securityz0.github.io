@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Ticket Investigation | Alisson</title>
+<meta name="description" content="Active Directory case study: reconstructing an AS-REP roasting to Golden Ticket attack chain via Kerberos event log analysis.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#3b82f6; --blue-bright:#7cb2ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(26px,4vw,40px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{border-left:2px solid var(--blue); background:var(--panel); padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  .lessons{list-style:none;}
+  .lessons li{position:relative; padding-left:22px; margin-bottom:10px; font-size:13.5px; color:var(--muted-2);}
+  .lessons li::before{content:"—"; position:absolute; left:0; color:var(--muted);}
+  .questions{list-style:none;}
+  .questions li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--muted-2);}
+  .questions li::before{content:"?"; position:absolute; left:0; color:var(--blue-bright); font-weight:700;}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Active Directory</div>
+  <h1>Golden Ticket Investigation</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Active Directory</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Domain Controller</div>
+      <div class="v">SOPRANOS-DC</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Windows Security event log analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1558.004 AS-REP Roasting</span>
+        <span class="mitre-chip">T1558.001 Golden Ticket</span>
+        <span class="mitre-chip">T1078 Valid Accounts</span>
+        <span class="mitre-chip">T1021 Remote Services</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    An alert flagged suspicious lateral movement toward the Domain Controller. Investigation of Kerberos-related
+    Security event logs revealed AS-REP roasting activity against a targeted account, followed by anomalous
+    KRBTGT-related ticket activity, and ultimately Administrator authentication consistent with Golden Ticket
+    usage. The compromised service account and source IP were identified, and the attack chain was reconstructed
+    from initial credential access through domain-wide impersonation.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+      <li><a href="#lessons">Lessons Learned</a></li>
+      <li><a href="#questions">Questions to Revisit</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    An alert was triggered within the network, indicating a possible attack on the Domain Controller.
+    The security team detected suspicious activity suggesting lateral movement attempts from a compromised
+    workstation to the DC. The objective was to trace the attacker's steps, determine their access point,
+    and prevent further escalation to the Domain Controller.
+  </p>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Source</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact" class="mono">Event ID 4624</td><td data-label="Source">Security Logs</td><td data-label="Why">Logon to compromised SQLService account by attacker</td></tr>
+      <tr><td data-label="Artifact" class="mono">Event ID 4624</td><td data-label="Source">Security Logs</td><td data-label="Why">Suspicious ANONYMOUS LOGON observed</td></tr>
+      <tr><td data-label="Artifact" class="mono">Event ID 4769</td><td data-label="Source">Security Logs</td><td data-label="Why">Suspected AS-REP roasting activity, encryption type 0x17, requesting KRBTGT</td></tr>
+      <tr><td data-label="Artifact" class="mono">Event ID 4768</td><td data-label="Source">Security Logs</td><td data-label="Why">Kerberos activity involving KRBTGT and Administrator account authentication</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Time (UTC)</th><th>User</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Time">2024-10-05 14:42:44</td><td data-label="User">Corrado</td><td data-label="Event">Kerberos service ticket request involving KRBTGT, encryption type 0x17</td><td data-label="Source" class="mono">EID 4769</td></tr>
+      <tr><td data-label="Time">2024-10-05 16:50:10</td><td data-label="User">Administrator</td><td data-label="Event">Kerberos activity involving KRBTGT</td><td data-label="Source" class="mono">EID 4768</td></tr>
+      <tr><td data-label="Time">2024-10-05 16:50:29</td><td data-label="User">SQLService</td><td data-label="Event">Kerberos service ticket activity associated with SQLService</td><td data-label="Source" class="mono">EID 4769</td></tr>
+      <tr><td data-label="Time">2024-10-05 17:37:56</td><td data-label="User">Corrado</td><td data-label="Event">Kerberos authentication request involving KRBTGT</td><td data-label="Source" class="mono">EID 4768</td></tr>
+      <tr><td data-label="Time">2024-10-05 17:57:03</td><td data-label="User">Administrator</td><td data-label="Event">Multiple Kerberos service ticket requests followed by successful authentication</td><td data-label="Source" class="mono">EID 4769, 4624</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>SQLService was identified as the compromised service account.</li>
+    <li>Activity involving the account "corrado" was consistent with AS-REP roasting.</li>
+    <li>Source IP 192.168.110.129 was associated with multiple stages of the observed activity.</li>
+    <li>Administrator authentication observed at 17:57:03 UTC was consistent with Golden Ticket usage.</li>
+    <li>The attack chain involved KRBTGT-related Kerberos activity prior to Administrator impersonation.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Initial Access</div><div class="desc">Initial access vector was not determined from available evidence.</div></div>
+    <div class="chain-step"><div class="stage">Credential Access</div><div class="desc">AS-REP roasting performed against the account "corrado".</div></div>
+    <div class="chain-step"><div class="stage">Lateral Movement</div><div class="desc">Activity from 192.168.110.129 observed interacting with the Domain Controller.</div></div>
+    <div class="chain-step"><div class="stage">Impact</div><div class="desc">Golden Ticket usage resulted in Administrator impersonation.</div></div>
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Initial review focused on identifying the compromised account and source IP associated with suspicious Kerberos activity.</div>
+    <div class="note-line">Timeline construction revealed that activity consistent with AS-REP roasting occurred prior to observed SQLService authentication activity.</div>
+    <div class="note-line">Correlation of Event IDs 4768 and 4769 helped establish the sequence of Kerberos-related events leading to Administrator authentication.</div>
+    <div class="note-line">The initial access vector could not be determined from the available evidence.</div>
+  </div>
+
+  <h2 id="lessons">Lessons Learned</h2>
+  <ul class="lessons">
+    <li>Building a timeline early made it easier to identify inconsistencies in the assumed attack narrative.</li>
+    <li>Separating observations from conclusions improved the quality of findings.</li>
+    <li>Correlating Kerberos Event IDs 4768 and 4769 provided valuable context for understanding account activity.</li>
+  </ul>
+
+  <h2 id="questions">Questions to Revisit</h2>
+  <ul class="questions">
+    <li>Was SQLService compromised before the observed AS-REP roasting activity, or is earlier activity missing from the available logs?</li>
+  </ul>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
