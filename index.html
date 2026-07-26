@@ -207,6 +207,9 @@
   .cert-card .verify:hover{color:var(--blue-bright);}
 
   /* LEARNING JOURNEY */
+  .verify-profile{margin-top:-30px; margin-bottom:34px;}
+  .verify-profile a{color:var(--blue-bright); font-size:13px; transition:opacity .2s;}
+  .verify-profile a:hover{opacity:.75;}
   .learning-overview{
     display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:44px;
   }
@@ -532,13 +535,18 @@
 <section id="learning">
   <div class="label"> // learning journey</div>
   <h2 class="section-title">ls ./learning-journey</h2>
+  <p class="verify-profile">
+    <a href="https://app.letsdefend.io/user/alissonsec" target="_blank" rel="noopener">
+      &rarr; verify progress on my LetsDefend profile ↗
+    </a>
+  </p>
 
   <div class="learning-overview">
     <div class="overview-card">
       <div class="k">Training Platforms</div>
       <div class="v">
         <ul>
-          <li>LetsDefend (Most Used)</li>
+          <li><a href="https://app.letsdefend.io/user/alissonsec" target="_blank" rel="noopener">LetsDefend (most used) ↗</a></li>
           <li>Cisco Networking Academy</li>
           <li>Hack &amp; Fix</li>
           <li>ICTTF</li>
@@ -753,7 +761,7 @@
 </section>
 
 <section id="contact">
-  <div class="label" style="justify-content:center;"> // contact</div>
+  <div class="label" style="justify-content:center;">04 // contact</div>
   <div class="contact-center">
     <h2 class="section-title">./contact</h2>
     <p>
