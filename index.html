@@ -17,8 +17,8 @@
     --panel-2:#0e1420;
     --border:#1c2536;
     --border-bright:#2b3a52;
-    --blue:#3b82f6;
-    --blue-bright:#7cb2ff;
+    --blue:#a855f7;
+    --blue-bright:#c9a6ff;
     --text:#e6ecf5;
     --muted:#65728a;
     --muted-2:#8a97ad;
@@ -39,8 +39,8 @@
     content:"";
     position:fixed; inset:0;
     background-image:
-      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+      linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
     background-size:42px 42px;
     pointer-events:none;
     z-index:0;
@@ -109,7 +109,7 @@
     text-transform:uppercase;
     background:linear-gradient(180deg, #ffffff 0%, var(--blue-bright) 120%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow:0 0 60px rgba(59,130,246,0.25);
+    text-shadow:0 0 60px rgba(168,85,247,0.25);
     opacity:0; animation:fadeIn .6s ease forwards; animation-delay:2.7s;
   }
   .hero .cursor{
@@ -137,7 +137,7 @@
   }
   .btn:hover{border-color:var(--blue); color:var(--blue-bright); box-shadow:0 0 0 1px var(--blue) inset;}
   .btn.primary{background:var(--blue); border-color:var(--blue); color:#04101f; font-weight:700;}
-  .btn.primary:hover{background:var(--blue-bright); box-shadow:0 0 24px rgba(59,130,246,.5);}
+  .btn.primary:hover{background:var(--blue-bright); box-shadow:0 0 24px rgba(168,85,247,.5);}
 
   .scroll-hint{
     position:absolute; bottom:36px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--muted);
@@ -326,7 +326,7 @@
     background:var(--panel); position:relative; cursor:pointer;
     transition:border-color .2s, transform .2s, box-shadow .2s;
   }
-  .icon-btn:hover{border-color:var(--blue); transform:translateY(-4px); box-shadow:0 0 18px rgba(59,130,246,.35);}
+  .icon-btn:hover{border-color:var(--blue); transform:translateY(-4px); box-shadow:0 0 18px rgba(168,85,247,.35);}
   .icon-btn svg{width:20px; height:20px; fill:var(--muted-2); transition:fill .2s;}
   .icon-btn:hover svg{fill:var(--blue-bright);}
   .icon-btn .tip{
@@ -530,161 +530,6 @@
       </div>
     -->
   </div>
-</section>
-
-<section id="learning">
-  <div class="label"> // learning journey</div>
-  <h2 class="section-title">ls ./learning-journey</h2>
-  <p class="verify-profile">
-    <a href="https://app.letsdefend.io/user/alissonsec" target="_blank" rel="noopener">
-      &rarr; verify progress on my LetsDefend profile ↗
-    </a>
-  </p>
-
-  <div class="learning-overview">
-    <div class="overview-card">
-      <div class="k">Training Platforms</div>
-      <div class="v">
-        <ul>
-          <li><a href="https://app.letsdefend.io/user/alissonsec" target="_blank" rel="noopener">LetsDefend (most used) ↗</a></li>
-          <li>Cisco Networking Academy</li>
-          <li>Hack &amp; Fix</li>
-          <li>ICTTF</li>
-        </ul>
-      </div>
-    </div>
-    <div class="overview-card">
-      <div class="k">Current Focus</div>
-      <div class="v">Detection Engineering<br>CPTS</div>
-    </div>
-    <div class="overview-card">
-      <div class="k">Completed Learning Paths</div>
-      <div class="v big">9+</div>
-    </div>
-  </div>
-
-  <details class="phase">
-    <summary class="phase-header">
-      <span class="num">Phase 01</span>
-      <h3>Foundations</h3>
-      <span class="phase-tag">2023 &ndash; 2025</span>
-      <span class="phase-count">4 completed</span>
-    </summary>
-    <div class="credential-list">
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Cybersecurity for Beginners</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Oct 2023</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Malware Analysis Path</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Apr 2024</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">SOC Analyst Path</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Jun 2024</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Junior Cybersecurity Analyst</span>
-        <span class="issuer">Cisco Networking Academy</span>
-        <span class="date">Mar 2025</span>
-      </div>
-    </div>
-  </details>
-
-  <details class="phase">
-    <summary class="phase-header">
-      <span class="num">Phase 02</span>
-      <h3>Incident Response &amp; DFIR</h3>
-      <span class="phase-tag">2025 &ndash; 2026</span>
-      <span class="phase-count">5 completed</span>
-    </summary>
-    <div class="credential-list">
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Certified Phishing Prevention Specialist (CPPS)</span>
-        <span class="issuer">Hack &amp; Fix</span>
-        <span class="date">Dec 2025</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">CRPO &ndash; Certified Ransomware Protection Officer</span>
-        <span class="issuer">ICTTF</span>
-        <span class="date">Jan 2026</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Incident Responder Learning Path</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Jun 2026</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Web Attack Detection &amp; Analysis</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Jun 2026</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟢</span>
-        <span class="name">Digital Forensics and Incident Response</span>
-        <span class="issuer">LetsDefend</span>
-        <span class="date">Jul 2026</span>
-      </div>
-    </div>
-  </details>
-
-  <details class="phase" open>
-    <summary class="phase-header">
-      <span class="num">Phase 03</span>
-      <h3>Engineering &amp; Offsec</h3>
-      <span class="phase-tag">Current</span>
-      <span class="phase-count">2 in progress</span>
-    </summary>
-    <div class="credential-list">
-      <div class="credential-item">
-        <span class="dot">🟡</span>
-        <span class="name">Detection Engineering</span>
-        <span class="issuer">In Progress</span>
-        <span class="date">&nbsp;</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">🟡</span>
-        <span class="name">CPTS</span>
-        <span class="issuer">In Progress</span>
-        <span class="date">&nbsp;</span>
-      </div>
-    </div>
-  </details>
-
-  <details class="phase">
-    <summary class="phase-header">
-      <span class="num">Phase 04</span>
-      <h3>Future</h3>
-      <span class="phase-tag">Planned</span>
-      <span class="phase-count">2 planned</span>
-    </summary>
-    <div class="credential-list">
-      <div class="credential-item">
-        <span class="dot">⚪</span>
-        <span class="name">CySA+</span>
-        <span class="issuer">Planned</span>
-        <span class="date">&nbsp;</span>
-      </div>
-      <div class="credential-item">
-        <span class="dot">⚪</span>
-        <span class="name">GCFA</span>
-        <span class="issuer">Planned</span>
-        <span class="date">&nbsp;</span>
-      </div>
-    </div>
-  </details>
-
 </section>
 
 <section id="case-studies">
