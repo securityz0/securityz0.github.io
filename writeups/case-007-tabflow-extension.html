@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TabFlow Pro: USB-Delivered Malicious Browser Extension | Alisson</title>
+<meta name="description" content="Malware case study: reconstructing a USB-delivered malicious Chrome extension used for credential and cookie theft, from physical access to C2 exfiltration.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#a855f7; --blue-bright:#c9a6ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(24px,4vw,38px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{border-left:2px solid var(--blue); background:var(--panel); padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;}
+  .callout.warn{border-left-color:#fbbf24;}
+  .callout.warn .k{color:#fbbf24; font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; display:block; margin-bottom:8px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .findings li.flag::before{content:"⚠"; color:#fbbf24;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Malware</div>
+  <h1>TabFlow Pro: USB-Delivered Malicious Browser Extension</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Malware</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Host</div>
+      <div class="v">WKSTN-ORION-014 (jharris)</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Disk image &amp; browser artifact analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1200 Hardware Additions</span>
+        <span class="mitre-chip">T1204.002 User Execution</span>
+        <span class="mitre-chip">T1059.001 PowerShell</span>
+        <span class="mitre-chip">T1176 Browser Extensions</span>
+        <span class="mitre-chip">T1547.001 Registry Run Keys</span>
+        <span class="mitre-chip">T1539 Steal Web Session Cookie</span>
+        <span class="mitre-chip">T1041 Exfiltration Over C2 Channel</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    An unauthorized individual gained brief physical access to workstation WKSTN-ORION-014 overnight,
+    connecting a USB mass storage device and leaving a malicious Chrome extension installed under the
+    guise of "TabFlow Pro." The extension was sideloaded outside the Chrome Web Store, granted itself
+    broad browser permissions, and established persistence via a Registry Run key executing a background
+    service binary. Its code was built to harvest credentials and session cookies from a defined list of
+    target domains, obfuscate the stolen data with a single-byte XOR key and Base64, and exfiltrate it to
+    a remote C2 endpoint. One recovered artifact timestamp is internally inconsistent with the rest of the
+    timeline and is flagged rather than treated as fact.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    Late at night, an unauthorized entry was reported into an operations bay. Security footage captured an
+    unknown individual at workstation WKSTN-ORION-014 &mdash; assigned to operations engineer James Harris
+    (jharris) &mdash; connecting a removable drive, spending a few minutes at the keyboard, and leaving. By
+    the time security swept the floor, the workstation had been left unlocked.
+  </p>
+  <p>
+    The following morning, endpoint telemetry flagged a Chrome extension in Harris's browser profile that
+    did not originate from the company's managed deployment channel. A triaged disk image of the
+    workstation was captured, along with the recovered extension source and two staging scripts.
+  </p>
+  <div class="callout">
+    Some artifacts on the host appeared deliberately planted or internally inconsistent with each other.
+    Separating what could be proven from what could only be inferred was treated as a core part of this
+    investigation.
+  </div>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Value</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact">USB Mass Storage VID/PID</td><td data-label="Value" class="mono">VID_23A9&amp;PID_EF18</td><td data-label="Why">Identified the physical device used for initial access</td></tr>
+      <tr><td data-label="Artifact">LNK Target</td><td data-label="Value" class="mono">E:\TabFlowPro</td><td data-label="Why">Confirmed execution originated from the removable drive</td></tr>
+      <tr><td data-label="Artifact">Staging Script</td><td data-label="Value" class="mono">install_extension.ps1</td><td data-label="Why">Installed the malicious extension after ExecutionPolicy bypass</td></tr>
+      <tr><td data-label="Artifact">Extension ID</td><td data-label="Value" class="mono">djflhoibgkdhkhhcedjiklpkjnoahfmg</td><td data-label="Why">Uniquely identified the extension in the Chrome profile</td></tr>
+      <tr><td data-label="Artifact">Chrome Web Store Origin</td><td data-label="Value" class="mono">False</td><td data-label="Why">Confirmed the extension was sideloaded, not officially distributed</td></tr>
+      <tr><td data-label="Artifact">Granted API Permissions</td><td data-label="Value" class="mono">9</td><td data-label="Why">Indicated broad access requested by the extension</td></tr>
+      <tr><td data-label="Artifact">Registry Run Key</td><td data-label="Value" class="mono">HKCU\...\Run\TabFlowServiceHost</td><td data-label="Why">Persistence mechanism surviving reboot</td></tr>
+      <tr><td data-label="Artifact">Run Key Command Line</td><td data-label="Value" class="mono">mshost_service.exe --background --no-window</td><td data-label="Why">Revealed the hidden background process launched at logon</td></tr>
+      <tr><td data-label="Artifact">C2 Host (background.js)</td><td data-label="Value" class="mono">api.tabflow-cdn[.]net</td><td data-label="Why">Identified the exfiltration endpoint</td></tr>
+      <tr><td data-label="Artifact">XOR Key</td><td data-label="Value" class="mono">0x5A</td><td data-label="Why">Confirmed obfuscation method for outbound payloads</td></tr>
+      <tr><td data-label="Artifact">Target Domain Count</td><td data-label="Value" class="mono">12</td><td data-label="Why">Scope of domains the extension filtered cookies for</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Time (UTC)</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Time">2026-04-16 23:21:04</td><td data-label="Event">USB mass storage device installation completed</td><td data-label="Source">Registry</td></tr>
+      <tr><td data-label="Time">2026-04-16 23:29:36</td><td data-label="Event">install_extension.ps1 execution failed &mdash; script execution disabled</td><td data-label="Source">PowerShell operational log</td></tr>
+      <tr><td data-label="Time">2026-04-16 23:29:50</td><td data-label="Event">Set-ExecutionPolicy Bypass -Scope Process -Force executed; install_extension.ps1 re-run successfully</td><td data-label="Source">PowerShell operational log</td></tr>
+      <tr><td data-label="Time">2026-04-16 23:31:34</td><td data-label="Event">HKCU\...\Run\TabFlowServiceHost persistence value created</td><td data-label="Source">Registry (NTUSER.dat)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:14px; font-size:13px;">
+    Elapsed time from USB installation to persistence establishment: <span class="mono">630 seconds (10m 30s)</span>.
+  </p>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>USB mass storage device VID_23A9&amp;PID_EF18 completed installation at 23:21:04 UTC, containing TabFlowPro.lnk pointing to E:\TabFlowPro.</li>
+    <li>The first attempt to run install_extension.ps1 (23:29:36 UTC) failed because script execution was disabled; 14 seconds later the execution policy was bypassed (<span class="mono">Set-ExecutionPolicy Bypass -Scope Process -Force</span>) and the script re-run successfully.</li>
+    <li>The TabFlow Pro extension was not installed from the Chrome Web Store and was granted 9 API permissions.</li>
+    <li>Persistence was established via a Registry Run key launching mshost_service.exe in the background, 630 seconds after USB installation.</li>
+    <li>The extension's background.js harvests login credentials, session cookies (across 12 target domains), open tab data, and basic system info, sending it to a hardcoded C2 endpoint.</li>
+    <li>Exfiltrated data is obfuscated with a single-byte XOR key (0x5A) and Base64-encoded before transmission.</li>
+    <li class="flag">The extension's <span class="mono">install_time</span> value recovered from Chrome's Preferences file resolves to 2024-08-31 &mdash; predating the observed compromise by over a year. This is treated as an unreliable or planted artifact rather than a genuine install timestamp, since this field is trivially editable and inconsistent with every other observed event.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Initial Access</div><div class="desc">Unauthorized physical access; USB mass storage device connected to the unlocked workstation.</div></div>
+    <div class="chain-step"><div class="stage">Execution</div><div class="desc">TabFlowPro.lnk executed from the USB drive; install_extension.ps1 initially failed (scripts disabled), then ran successfully after an ExecutionPolicy bypass.</div></div>
+    <div class="chain-step"><div class="stage">Installation</div><div class="desc">Malicious Chrome extension sideloaded into the browser profile outside the Web Store, granted broad API permissions.</div></div>
+    <div class="chain-step"><div class="stage">Persistence</div><div class="desc">Registry Run key created to launch a hidden background service binary at logon.</div></div>
+    <div class="chain-step"><div class="stage">Collection</div><div class="desc">Extension captures credentials from login forms, session cookies across 12 domains, and browser/system metadata.</div></div>
+    <div class="chain-step"><div class="stage">Exfiltration</div><div class="desc">Stolen data XOR-obfuscated and Base64-encoded, sent to a hardcoded C2 endpoint over HTTPS.</div></div>
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Correlated USB device installation, LNK execution, and PowerShell activity to establish the initial access vector.</div>
+    <div class="note-line">Confirmed the extension was sideloaded (not Web Store-sourced) via its installation metadata and lack of a store listing.</div>
+    <div class="note-line">Traced persistence to a Registry Run key launching a background executable disguised as a service host.</div>
+    <div class="note-line">Reviewed the extension's background.js source directly to confirm C2 destination, exfiltration triggers, and obfuscation method rather than relying on network traffic alone.</div>
+    <div class="note-line">Flagged the Preferences install_time value as inconsistent with the rest of the timeline &mdash; treated as unreliable rather than incorporated into the confirmed sequence of events, per the assignment's emphasis on separating proof from inference.</div>
+  </div>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
