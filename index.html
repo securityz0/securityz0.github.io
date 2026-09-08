@@ -55,7 +55,7 @@
   }
 
   a{color:inherit; text-decoration:none;}
-  section{position:relative; z-index:1; padding:110px 6vw;}
+  section{position:relative; z-index:1; padding:160px 6vw;}
   .label{
     font-size:12px; letter-spacing:.18em; text-transform:uppercase;
     color:var(--blue-bright); display:flex; align-items:center; gap:10px; margin-bottom:28px;
@@ -86,19 +86,10 @@
     text-align:center;
     padding-top:110px;
   }
-  .boot{
-    font-size:16px; color:var(--muted); margin-bottom:34px; max-width:640px;
-    text-align:left; margin-left:auto; margin-right:auto; line-height:1.7;
+  .coord{
+    font-size:11px; color:var(--muted); letter-spacing:.14em; margin-bottom:44px;
+    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:.2s;
   }
-  .boot div{margin-bottom:3px; opacity:0; animation:fadeIn .4s ease forwards;}
-  .boot div:nth-child(1){animation-delay:.1s}
-  .boot div:nth-child(2){animation-delay:.5s}
-  .boot div:nth-child(3){animation-delay:.9s}
-  .boot div:nth-child(4){animation-delay:1.3s}
-  .boot div:nth-child(5){animation-delay:1.7s}
-  .boot div:nth-child(6){animation-delay:2.0s}
-  .boot div:nth-child(7){animation-delay:2.3s; color:var(--blue-bright);}
-  .boot .ok{color:var(--blue-bright);}
   @keyframes fadeIn{to{opacity:1;}}
 
   .hero h1{
@@ -110,7 +101,7 @@
     background:linear-gradient(180deg, #ffffff 0%, var(--blue-bright) 120%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     text-shadow:0 0 60px rgba(168,85,247,0.25);
-    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:2.7s;
+    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:.5s;
   }
   .hero .cursor{
     display:inline-block; width:.5em; background:var(--blue-bright);
@@ -121,13 +112,13 @@
   .hero-sub{
     margin-top:22px; font-size:clamp(14px,2vw,18px); color:var(--muted-2);
     max-width:600px; margin-left:auto; margin-right:auto;
-    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:3.1s;
+    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:1.1s;
   }
   .hero-sub .role{color:var(--blue-bright);}
 
   .hero-cta{
     margin-top:44px; display:flex; gap:16px; flex-wrap:wrap; justify-content:center;
-    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:3.4s;
+    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:1.4s;
   }
   .btn{
     border:1px solid var(--border-bright,#2b3a52);
@@ -142,7 +133,7 @@
   .scroll-hint{
     position:absolute; bottom:36px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--muted);
     display:flex; align-items:center; gap:8px;
-    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:3.8s;
+    opacity:0; animation:fadeIn .6s ease forwards; animation-delay:1.8s;
   }
   .scroll-hint::after{content:"↓"; animation:bob 1.6s ease-in-out infinite;}
   @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
@@ -176,105 +167,56 @@
   .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:7px; box-shadow:0 0 8px var(--blue-bright); animation:pulse 2s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
-  /* FOCUS */
-  .focus-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
-  .focus-card{
-    border:1px solid var(--border); background:var(--panel);
-    padding:20px 22px; transition:border-color .2s, transform .2s;
-    border-left:2px solid var(--card-color, var(--blue));
-  }
-  .focus-card:hover{transform:translateY(-3px);}
-  .focus-card .code{
-    font-size:11px; font-weight:700; color:var(--card-color, var(--blue-bright));
-    border:1px solid var(--card-color, var(--blue)); display:inline-block;
-    padding:3px 9px; margin-bottom:14px; letter-spacing:.03em;
-  }
-  .focus-card h3{font-size:15px; color:var(--text); margin-bottom:14px;}
-  .focus-card .tags{display:flex; flex-wrap:wrap; gap:8px;}
-  .focus-card .tags span{
-    font-size:11.5px; color:var(--card-color, var(--blue-bright));
-    border:1px solid var(--card-color, var(--blue)); padding:3px 9px;
-    background:color-mix(in srgb, var(--card-color, var(--blue)) 10%, transparent);
-  }
-  .focus-card.c-dfir{--card-color:var(--blue);}
-  .focus-card.c-detection{--card-color:var(--blue);}
-  .focus-card.c-hunting{--card-color:var(--blue);}
-  .focus-card.c-secops{--card-color:var(--blue);}
+  /* LINE LIST — shared by focus, certs, case-studies */
+  .line-list{display:flex; flex-direction:column;}
+  .line-list.top-border{border-top:1px solid var(--border);}
 
-  /* CERTIFICATIONS */
-  .cert-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
-  .cert-card{
-    border:1px solid var(--border); background:var(--panel);
-    padding:26px 24px; display:flex; flex-direction:column; gap:14px;
-    transition:border-color .2s, transform .2s;
+  .flow-line{
+    display:grid; grid-template-columns:70px 220px 1fr; gap:20px; align-items:baseline;
+    padding:22px 0; border-bottom:1px solid var(--border);
+    transition:padding-left .3s, border-color .3s;
   }
-  .cert-card:hover{border-color:var(--blue); transform:translateY(-4px);}
-  .cert-badge{
-    width:44px; height:44px; border:1px solid var(--blue); border-radius:8px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .cert-badge svg{width:22px; height:22px; stroke:var(--blue-bright); fill:none; stroke-width:1.6;}
-  .cert-card h3{font-size:16px; color:var(--text);}
-  .cert-card .issuer{font-size:12.5px; color:var(--blue-bright); letter-spacing:.03em;}
-  .cert-card .meta{font-size:11.5px; color:var(--muted); display:flex; justify-content:space-between; margin-top:auto; padding-top:10px; border-top:1px solid var(--border);}
-  .cert-card .verify{color:var(--muted-2); transition:color .2s;}
-  .cert-card .verify:hover{color:var(--blue-bright);}
+  .flow-line:hover{padding-left:14px; border-color:var(--blue-bright);}
+  .fcode{font-size:11px; color:var(--blue-bright); letter-spacing:.03em;}
+  .ftitle{font-size:15px; color:var(--text);}
+  .ftags{font-size:12.5px; color:var(--muted-2);}
 
-  /* CASE STUDIES */
-  .featured-case{
-    border:1px solid var(--blue); background:linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
-    padding:38px; margin-bottom:22px; position:relative;
+  .cert-line{
+    display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+    padding:22px 0; border-bottom:1px solid var(--border); border-top:1px solid var(--border);
+    transition:padding-left .3s, border-color .3s;
   }
+  .cert-line:hover{padding-left:14px; border-color:var(--blue-bright);}
+  .cert-line .ftitle{flex-shrink:0;}
+  .cert-line .ftags{flex:1;}
+  .verify-link{font-size:12px; color:var(--blue-bright); flex-shrink:0;}
+
+  .case-line{
+    display:flex; align-items:baseline; gap:24px; padding:22px 0;
+    border-bottom:1px solid var(--border); transition:padding-left .3s, border-color .3s;
+  }
+  a.case-line:hover{padding-left:14px; border-color:var(--blue-bright);}
+  .case-line .cat{font-size:11px; color:var(--muted); letter-spacing:.06em; width:120px; flex-shrink:0;}
+  .case-line .cat.c-th, .case-line .cat.c-ad, .case-line .cat.c-ws,
+  .case-line .cat.c-ma, .case-line .cat.c-df, .case-line .cat.c-mf,
+  .case-line .cat.c-nf{color:var(--blue-bright); font-weight:700;}
+  .case-line .title{font-size:15px; color:var(--text); flex:1;}
+  .case-line.soon .title{color:var(--muted); font-style:italic;}
+  .case-line .tag-read{font-size:12px; color:var(--blue-bright); flex-shrink:0;}
+  .case-line .tag-soon{font-size:11px; color:var(--muted); flex-shrink:0;}
+
+  .featured-line{padding-bottom:40px; margin-bottom:6px; border-bottom:1px solid var(--border-bright);}
   .featured-tag{
     font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright);
     border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:18px;
   }
-  .featured-case h3{font-size:clamp(20px,2.6vw,28px); color:var(--text); margin-bottom:14px; line-height:1.3;}
-  .featured-case p{font-size:14px; color:var(--muted-2); max-width:640px; margin-bottom:22px;}
-  .featured-case .read-link{
+  .featured-line h3{font-size:clamp(20px,2.6vw,28px); color:var(--text); margin-bottom:14px; line-height:1.3;}
+  .featured-line p{font-size:14px; color:var(--muted-2); max-width:640px; margin-bottom:22px;}
+  .featured-line .read-link{
     font-size:13px; color:var(--blue-bright); display:inline-flex; align-items:center; gap:6px;
     transition:gap .2s;
   }
-  .featured-case .read-link:hover{gap:10px;}
-
-  .case-divider{
-    text-align:center; font-size:11px; color:var(--muted); letter-spacing:.14em;
-    margin:44px 0 24px; text-transform:uppercase;
-  }
-
-  .case-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
-  .case-card{
-    border:1px solid var(--border); background:var(--panel); padding:24px;
-    display:flex; flex-direction:column; gap:10px; min-height:150px;
-    transition:border-color .2s, transform .2s;
-  }
-  .case-card.linked{cursor:pointer;}
-  .case-card.linked:hover{border-color:var(--blue); transform:translateY(-4px);}
-  .case-card .cat{font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright);}
-  .case-card h4{font-size:15px; color:var(--text); flex:1; line-height:1.4;}
-  .case-card.soon h4{color:var(--muted); font-style:italic; font-weight:400;}
-  .case-card .read{font-size:11.5px; color:var(--blue-bright);}
-  .case-card .soon-tag{font-size:11px; color:var(--muted);}
-  .case-card .code{
-    font-size:11px; font-weight:700; color:var(--card-color, var(--blue-bright));
-    border:1px solid var(--card-color, var(--blue)); display:inline-block;
-    padding:2px 8px; margin-bottom:12px; letter-spacing:.03em;
-  }
-  .case-card.linked{border-left:2px solid var(--card-color, var(--blue));}
-  .case-card.linked:hover{border-color:var(--card-color, var(--blue));}
-  .case-card .case-tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:auto; padding-top:10px;}
-  .case-card .case-tags span{
-    font-size:10.5px; color:var(--card-color, var(--blue-bright));
-    border:1px solid var(--card-color, var(--blue)); padding:2px 7px;
-  }
-  .case-card.c-df{--card-color:var(--blue);}
-  .case-card.c-th{--card-color:var(--blue);}
-  .case-card.c-ad{--card-color:var(--blue);}
-  .case-card.c-ws{--card-color:var(--blue);}
-  .case-card.c-ma{--card-color:var(--blue);}
-  .case-card.c-pe{--card-color:var(--blue);}
-  .case-card.c-mf{--card-color:var(--blue);}
-  .case-card.c-hs{--card-color:var(--blue);}
+  .featured-line .read-link:hover{gap:10px;}
 
   .github-cta{
     text-align:center; margin-top:40px; padding-top:32px; border-top:1px solid var(--border);
@@ -329,20 +271,24 @@
   @media (max-width:900px){
     .nav-links{display:none;}
     .about-grid{grid-template-columns:1fr;}
-    .focus-grid{grid-template-columns:repeat(2,1fr);}
-    .cert-grid{grid-template-columns:repeat(2,1fr);}
-    .case-grid{grid-template-columns:1fr;}
+    .flow-line{grid-template-columns:1fr; gap:6px;}
   }
   @media (max-width:520px){
-    .focus-grid{grid-template-columns:1fr;}
-    .cert-grid{grid-template-columns:1fr;}
-    .featured-case{padding:26px 22px;}
-    section{padding:80px 6vw;}
+    .featured-line{padding-bottom:26px;}
+    .case-line{flex-wrap:wrap; gap:6px;}
+    .case-line .cat{width:auto;}
+    .cert-line{flex-wrap:wrap; gap:6px;}
+    section{padding:90px 6vw;}
   }
+
+  /* SCROLL REVEAL */
+  .reveal{opacity:0; transform:translateY(28px); transition:opacity .8s ease, transform .8s ease;}
+  .reveal.in{opacity:1; transform:translateY(0);}
 
   @media (prefers-reduced-motion: reduce){
     *{animation:none !important; transition:none !important;}
-    .boot div, .hero h1, .hero-sub, .hero-cta, .scroll-hint{opacity:1;}
+    .coord, .hero h1, .hero-sub, .hero-cta, .scroll-hint{opacity:1;}
+    .reveal{opacity:1; transform:none;}
   }
 
   ::selection{background:var(--blue); color:#04101f;}
@@ -363,17 +309,9 @@
 </nav>
 
 <section class="hero" id="hero">
-  <div class="boot">
-    <div>analyst@fedora:~$ initializing session...</div>
-    <div>&gt; loading profile <span class="ok">[ OK ]</span></div>
-    <div>&gt; parsing background <span class="ok">[ OK ]</span></div>
-    <div>&gt; compiling skillset <span class="ok">[ OK ]</span></div>
-    <div>&gt; session ready.</div>
-    <div>&nbsp;</div>
-    <div>analyst@fedora:~$ whoami</div>
-  </div>
+  <div class="coord">SECTOR: BLUE TEAM &nbsp;/&nbsp; STATUS: ACTIVE</div>
 
-  <h1>ALISSON<span class="cursor">&nbsp;</span></h1>
+  <h1 id="decryptName"><span id="decryptText"></span><span class="cursor">&nbsp;</span></h1>
 
   <p class="hero-sub">
     <span class="role">Blue Team</span> security enthusiast focused on
@@ -389,7 +327,7 @@
   <div class="scroll-hint">scroll</div>
 </section>
 
-<section id="about">
+<section id="about" class="reveal">
   <div class="label"> // about</div>
   <div class="about-grid">
     <div class="terminal">
@@ -433,142 +371,110 @@
   </div>
 </section>
 
-<section id="focus">
+<section id="focus" class="reveal">
   <div class="label"> // focus</div>
-  <h2 class="section-title">ls ./focus</h2>
-  <div class="focus-grid">
-    <div class="focus-card c-dfir">
-      <div class="code">DF-01</div>
-      <h3>DFIR</h3>
-      <div class="tags">
-        <span>Memory Forensics</span><span>Disk Imaging</span><span>Timeline Reconstruction</span><span>Artifact Analysis</span>
-      </div>
+  <h2 class="section-title">What I actually do.</h2>
+  <div class="line-list">
+    <div class="flow-line">
+      <span class="fcode">DF-01</span>
+      <span class="ftitle">DFIR</span>
+      <span class="ftags">Memory Forensics &middot; Disk Imaging &middot; Timeline Reconstruction &middot; Artifact Analysis</span>
     </div>
-    <div class="focus-card c-detection">
-      <div class="code">DE-02</div>
-      <h3>Detection Engineering</h3>
-      <div class="tags">
-        <span>Log Correlation</span><span>IOC/IOA Development</span><span>Detection Tuning</span>
-      </div>
+    <div class="flow-line">
+      <span class="fcode">DE-02</span>
+      <span class="ftitle">Detection Engineering</span>
+      <span class="ftags">Log Correlation &middot; IOC/IOA Development &middot; Detection Tuning</span>
     </div>
-    <div class="focus-card c-hunting">
-      <div class="code">TH-03</div>
-      <h3>Threat Hunting</h3>
-      <div class="tags">
-        <span>Hypothesis-Driven Hunting</span><span>ATT&amp;CK Mapping</span><span>Anomaly Detection</span>
-      </div>
+    <div class="flow-line">
+      <span class="fcode">TH-03</span>
+      <span class="ftitle">Threat Hunting</span>
+      <span class="ftags">Hypothesis-Driven Hunting &middot; ATT&amp;CK Mapping &middot; Anomaly Detection</span>
     </div>
-    <div class="focus-card c-secops">
-      <div class="code">SO-04</div>
-      <h3>Security Operations</h3>
-      <div class="tags">
-        <span>Alert Triage</span><span>Incident Response Workflows</span><span>Chain of Custody</span>
-      </div>
+    <div class="flow-line">
+      <span class="fcode">SO-04</span>
+      <span class="ftitle">Security Operations</span>
+      <span class="ftags">Alert Triage &middot; Incident Response Workflows &middot; Chain of Custody</span>
     </div>
   </div>
 </section>
 
-<section id="certs">
+<section id="certs" class="reveal">
   <div class="label"> // certifications</div>
-  <h2 class="section-title">ls ./certs</h2>
-  <div class="cert-grid">
-    <div class="cert-card">
-      <div class="cert-badge">
-        <svg viewBox="0 0 24 24"><path d="M12 2l8 3.5v6c0 5-3.4 8.5-8 10.5-4.6-2-8-5.5-8-10.5v-6L12 2z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-      <h3>Security Analyst Level 1 (SAL1)</h3>
-      <div class="issuer">TryHackMe</div>
-      <div class="meta">
-        <span>Issued Apr 2026</span>
-        <a class="verify" href="https://assets.tryhackme.com/certification-certificate/69e8c32d4f7a1d3ec54f9e17.pdf" target="_blank" rel="noopener">verify ↗</a>
-      </div>
-    </div>
-    <!--
-      Add more certifications by copying the block above, e.g.:
-
-      <div class="cert-card">
-        <div class="cert-badge">
-          <svg viewBox="0 0 24 24"><path d="M12 2l8 3.5v6c0 5-3.4 8.5-8 10.5-4.6-2-8-5.5-8-10.5v-6L12 2z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Certification Name</h3>
-        <div class="issuer">Issuing Org</div>
-        <div class="meta">
-          <span>Issued Month Year</span>
-          <a class="verify" href="VERIFY_LINK" target="_blank" rel="noopener">verify ↗</a>
-        </div>
-      </div>
-    -->
+  <h2 class="section-title">Verified credentials.</h2>
+  <div class="line-list">
+    <a class="cert-line" href="https://assets.tryhackme.com/certification-certificate/69e8c32d4f7a1d3ec54f9e17.pdf" target="_blank" rel="noopener">
+      <span class="ftitle">Security Analyst Level 1 (SAL1)</span>
+      <span class="ftags">TryHackMe &middot; Issued Apr 2026</span>
+      <span class="verify-link">verify ↗</span>
+    </a>
+    <!-- Add more certifications by copying the block above -->
   </div>
 </section>
 
-<section id="case-studies">
+<section id="case-studies" class="reveal">
   <div class="label"> // case studies</div>
-  <h2 class="section-title">ls ./case-studies</h2>
+  <h2 class="section-title">Recent investigations.</h2>
 
-  <div class="featured-case">
-    <div class="featured-tag">Featured Case</div>
+  <div class="featured-line">
+    <span class="featured-tag">Featured</span>
     <h3>Windows Endpoint Compromise Forensics</h3>
     <p>
       Reconstructed a complete intrusion chain involving a malicious phishing document, stager execution,
-      timestamp manipulation, persistence via Image File Execution Options, and RDP-based lateral movement —
-      using manual forensic artifact analysis end to end.
+      timestamp manipulation, persistence via Image File Execution Options, and RDP-based lateral movement.
     </p>
     <a class="read-link" href="writeups/case-001-win-forensics.html">Read Case &rarr;</a>
   </div>
 
-  <div class="case-divider">// browse by category</div>
-
-  <div class="case-grid">
-    <div class="case-card soon">
-      <div class="cat">Digital Forensics</div>
-      <h4>Linux Memory Forensics</h4>
-      <span class="soon-tag">Coming soon</span>
+  <div class="line-list top-border">
+    <a class="case-line" href="writeups/case-008-orbit-breach.html">
+      <span class="cat c-nf">NF-01</span>
+      <span class="title">Orbit Breach: Satellite Ground Station Compromise</span>
+      <span class="tag-read">Read case ↗</span>
+    </a>
+    <div class="case-line soon">
+      <span class="cat">Digital Forensics</span>
+      <span class="title">Linux Memory Forensics</span>
+      <span class="tag-soon">Coming soon</span>
     </div>
-    <a class="case-card linked c-th" href="writeups/case-002-threat-hunting.html">
-      <div class="code">TH-01</div>
-      <h4>Masqueraded Executable Intrusion</h4>
-      <div class="case-tags"><span>Sysmon</span><span>PowerShell Bypass</span><span>Local Persistence</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-002-threat-hunting.html">
+      <span class="cat c-th">TH-01</span>
+      <span class="title">Masqueraded Executable Intrusion</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <a class="case-card linked c-ad" href="writeups/case-003-golden-ticket.html">
-      <div class="code">AD-01</div>
-      <h4>Golden Ticket</h4>
-      <div class="case-tags"><span>AS-REP Roasting</span><span>KRBTGT</span><span>Kerberos</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-003-golden-ticket.html">
+      <span class="cat c-ad">AD-01</span>
+      <span class="title">Golden Ticket</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <a class="case-card linked c-ws" href="writeups/case-005-tomcat-rce.html">
-      <div class="code">WS-01</div>
-      <h4>Apache Tomcat Serialized Payload RCE</h4>
-      <div class="case-tags"><span>Web Shell</span><span>CVE-2024-50379</span><span>JSP</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-005-tomcat-rce.html">
+      <span class="cat c-ws">WS-01</span>
+      <span class="title">Apache Tomcat Serialized Payload RCE</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <a class="case-card linked c-ma" href="writeups/case-007-tabflow-extension.html">
-      <div class="code">MA-01</div>
-      <h4>TabFlow Pro Malicious Extension</h4>
-      <div class="case-tags"><span>USB Delivery</span><span>Browser Extension</span><span>Credential Theft</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-007-tabflow-extension.html">
+      <span class="cat c-ma">MA-01</span>
+      <span class="title">TabFlow Pro Malicious Extension</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <a class="case-card linked c-df" href="writeups/case-004-usb-forensics.html">
-      <div class="code">DF-01</div>
-      <h4>USB Forensics</h4>
-      <div class="case-tags"><span>Shellbags</span><span>USBSTOR</span><span>Jump Lists</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-004-usb-forensics.html">
+      <span class="cat c-df">DF-01</span>
+      <span class="title">USB Forensics</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <div class="case-card soon">
-      <div class="cat">Persistence</div>
-      <h4>Sharpsist Windows Persistence Toolkit</h4>
-      <span class="soon-tag">Coming soon</span>
+    <div class="case-line soon">
+      <span class="cat">Persistence</span>
+      <span class="title">Sharpsist Windows Persistence Toolkit</span>
+      <span class="tag-soon">Coming soon</span>
     </div>
-    <a class="case-card linked c-mf" href="writeups/case-006-windows-memory-forensics.html">
-      <div class="code">MF-01</div>
-      <h4>Windows Memory Forensics</h4>
-      <div class="case-tags"><span>Volatility</span><span>Ransomware</span><span>Registry</span></div>
-      <span class="read">Read case ↗</span>
+    <a class="case-line" href="writeups/case-006-windows-memory-forensics.html">
+      <span class="cat c-mf">MF-01</span>
+      <span class="title">Windows Memory Forensics</span>
+      <span class="tag-read">Read case ↗</span>
     </a>
-    <div class="case-card soon">
-      <div class="cat">Home SOC</div>
-      <h4>Home SOC</h4>
-      <span class="soon-tag">Coming soon</span>
+    <div class="case-line soon">
+      <span class="cat">Home SOC</span>
+      <span class="title">Home SOC</span>
+      <span class="tag-soon">Coming soon</span>
     </div>
   </div>
 
@@ -580,10 +486,10 @@
   </div>
 </section>
 
-<section id="contact">
+<section id="contact" class="reveal">
   <div class="label" style="justify-content:center;">04 // contact</div>
   <div class="contact-center">
-    <h2 class="section-title">./contact</h2>
+    <h2 class="section-title">Let's talk.</h2>
     <p>
       Open for networking, collaboration, or Blue Team / DFIR opportunities.
       Reach out through any of the channels below.
@@ -600,7 +506,7 @@
         <span class="tip">GitHub</span>
       </a>
 
-      <a class="icon-btn" href="https://app.letsdefend.io/user/securityx0" target="_blank" rel="noopener" aria-label="LetsDefend Profile">
+      <a class="icon-btn" href="https://app.letsdefend.io/user/alissonsec" target="_blank" rel="noopener" aria-label="LetsDefend Profile">
         <svg viewBox="0 0 1680.066402 1227.822314" xmlns="http://www.w3.org/2000/svg"> <g transform="translate(-193.996861,1625.930597) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"> <path d="M9725 15484 c-335 -426 -634 -802 -663 -834 -40 -44 -66 -64 -108 -79 -62 -24 -132 -26 -185 -7 -29 10 -793 471 -1856 1120 -51 31 -96 56 -100 56 -4 0 -82 -240 -172 -533 -374 -1217 -436 -1414 -458 -1450 -47 -75 -170 -135 -251 -123 -32 5 -349 35 -862 81 -352 32 -714 66 -859 81 -85 8 -157 12 -161 7 -3 -4 13 -181 36 -393 95 -860 144 -1322 144 -1363 0 -70 -28 -136 -80 -187 -38 -37 -76 -58 -215 -117 -94 -40 -343 -147 -555 -239 -212 -91 -430 -185 -485 -209 -515 -220 -882 -381 -894 -392 -3 -2 270 -279 605 -616 413 -414 617 -625 630 -652 10 -23 20 -71 22 -112 3 -60 0 -80 -20 -125 -27 -59 27 -7 -871 -822 l-427 -387 68 -52 c38 -29 399 -307 803 -619 544 -420 741 -578 761 -609 15 -23 32 -66 38 -96 11 -52 3 -95 -179 -1006 -104 -523 -188 -953 -186 -956 4 -3 189 12 760 64 88 8 315 28 505 45 190 17 469 42 620 55 151 14 317 29 369 33 l94 8 39 -33 c235 -196 641 -412 923 -489 179 -50 398 -43 580 17 129 43 230 100 395 224 426 319 773 489 1025 502 93 5 107 3 193 -26 346 -116 850 -475 1452 -1034 l145 -135 98 92 c466 436 885 763 1213 949 100 57 271 130 343 147 245 58 668 -126 1189 -517 194 -145 324 -206 514 -239 123 -21 301 -15 417 15 261 68 657 273 905 469 l74 58 88 -8 c49 -4 215 -19 369 -32 154 -14 510 -46 790 -71 281 -25 637 -57 793 -71 155 -14 289 -24 296 -22 10 2 -31 223 -176 943 -207 1032 -203 1004 -150 1098 33 59 -17 19 902 727 780 601 730 562 730 570 0 4 -89 88 -197 186 -109 99 -390 354 -625 567 -235 213 -435 399 -446 415 -49 69 -58 187 -22 269 17 39 139 167 632 660 337 337 609 615 606 619 -4 3 -62 30 -130 59 -68 29 -292 126 -498 215 -606 262 -1102 476 -1293 558 -192 83 -233 109 -273 178 -36 61 -40 134 -20 319 23 206 48 438 101 930 24 231 49 458 55 504 5 47 9 86 7 87 -1 1 -117 7 -257 13 -140 7 -275 14 -300 16 -25 2 -155 9 -290 15 -135 6 -324 15 -420 20 -96 5 -272 14 -390 20 -239 12 -284 20 -340 55 -63 40 -88 83 -185 327 -52 128 -206 516 -344 861 -138 346 -253 633 -256 637 -3 5 -99 -48 -213 -117 -1325 -807 -1689 -1026 -1724 -1039 -83 -29 -199 -5 -263 53 -17 16 -317 391 -668 836 -351 444 -641 807 -645 806 -4 0 -281 -349 -617 -775z m1022 -794 c215 -273 417 -520 450 -551 75 -69 153 -121 249 -165 221 -103 497 -111 723 -22 87 34 82 31 461 262 162 98 431 261 596 362 l302 182 206 -517 c121 -303 225 -548 252 -594 52 -91 172 -220 259 -282 162 -115 308 -162 545 -175 91 -5 206 -12 255 -15 103 -6 434 -22 610 -30 66 -3 150 -8 187 -11 66 -6 67 -6 63 -32 -3 -15 -23 -196 -45 -402 -22 -206 -44 -414 -50 -461 -42 -353 43 -631 257 -842 132 -130 165 -148 643 -354 184 -80 403 -174 485 -210 83 -36 193 -83 245 -105 52 -22 97 -42 99 -44 3 -3 -126 -136 -286 -297 -342 -344 -386 -403 -447 -596 -52 -164 -54 -379 -5 -545 27 -92 105 -241 166 -317 26 -33 178 -178 338 -322 159 -144 317 -288 352 -319 l62 -58 -498 -384 c-301 -233 -522 -411 -560 -452 -107 -114 -182 -249 -223 -404 -19 -71 -22 -109 -22 -230 1 -143 3 -152 105 -657 l105 -513 -26 0 c-14 0 -97 7 -185 14 -668 58 -790 69 -793 71 -2 2 24 58 57 126 71 149 105 243 134 369 29 132 32 510 4 670 -166 946 -814 1893 -1692 2474 -405 268 -726 401 -1152 478 -114 20 -158 23 -408 22 -259 0 -291 -2 -425 -27 -463 -84 -880 -278 -1266 -588 -147 -119 -331 -299 -438 -429 -43 -52 -82 -98 -85 -103 -4 -4 -44 37 -90 92 -45 55 -151 167 -236 249 -438 427 -934 685 -1505 783 -146 26 -499 36 -650 20 -466 -50 -877 -208 -1330 -511 -779 -521 -1397 -1368 -1615 -2215 -109 -427 -105 -829 14 -1128 17 -42 54 -122 81 -178 28 -56 50 -102 48 -104 -3 -2 -312 -29 -803 -71 -93 -8 -177 -13 -186 -12 -13 3 -1 76 89 518 98 488 104 522 105 645 0 87 -4 153 -15 200 -38 166 -118 319 -231 441 -32 35 -272 228 -552 443 -272 210 -496 385 -499 389 -2 4 114 113 257 242 479 432 530 487 603 645 128 277 114 611 -36 866 -54 91 -84 125 -374 416 -154 155 -278 284 -275 286 2 3 99 45 214 95 819 352 1014 438 1077 475 86 51 214 169 273 251 107 151 164 316 172 496 5 116 2 154 -72 827 -14 122 -25 228 -25 235 0 15 -25 17 720 -52 300 -28 466 -39 510 -35 89 9 216 39 291 70 209 84 418 289 502 490 23 55 106 319 297 945 40 129 75 240 79 247 4 8 218 -117 621 -363 338 -205 649 -388 690 -405 124 -52 243 -72 390 -65 244 11 428 86 602 245 30 27 234 277 453 555 220 278 402 502 406 498 3 -4 181 -230 396 -502z m-2452 -5540 c627 -70 1204 -429 1597 -995 82 -117 105 -159 274 -496 85 -168 160 -314 168 -324 12 -17 28 10 169 291 246 490 337 625 587 874 374 374 785 584 1263 645 363 46 736 -22 1097 -201 803 -400 1517 -1286 1707 -2122 24 -103 27 -139 27 -297 1 -177 0 -182 -31 -272 -82 -234 -213 -434 -410 -623 -163 -157 -326 -265 -561 -373 -303 -140 -392 -132 -635 51 -476 359 -908 571 -1268 622 -96 14 -268 14 -356 0 -273 -43 -679 -253 -1108 -573 l-99 -74 -81 28 c-204 71 -465 77 -653 14 l-43 -14 -153 109 c-353 253 -652 412 -906 483 -308 87 -668 27 -1083 -182 -212 -106 -399 -223 -627 -392 -145 -107 -187 -133 -243 -150 -98 -30 -173 -23 -307 29 -521 205 -893 553 -1070 1003 -64 162 -66 431 -5 669 130 509 438 1023 875 1460 370 371 780 632 1165 743 88 25 280 63 360 70 87 8 265 6 350 -3z"/> <path d="M7985 8294 c-409 -72 -715 -325 -789 -651 -9 -42 -16 -116 -16 -177 l0 -106 330 0 330 0 0 74 c0 89 13 109 98 154 118 63 289 80 435 43 88 -23 124 -40 172 -82 34 -31 35 -32 35 -110 l0 -79 331 0 332 0 -5 143 c-5 122 -9 152 -32 215 -40 106 -89 184 -170 269 -155 164 -352 264 -605 307 -116 20 -335 20 -446 0z"/> <path d="M12257 8295 c-233 -39 -445 -143 -589 -289 -155 -157 -218 -307 -221 -531 l-2 -110 330 0 330 0 3 77 c3 77 3 77 44 112 79 68 215 102 366 93 139 -9 237 -44 301 -107 29 -30 31 -36 31 -106 l0 -74 330 0 330 0 0 94 c0 227 -66 392 -220 547 -152 155 -347 251 -594 294 -107 18 -329 18 -439 0z"/> <path d="M8320 4919 c-272 -31 -504 -173 -571 -349 -16 -41 -19 -76 -19 -200 0 -184 16 -238 92 -312 82 -80 78 -79 654 -76 564 3 537 0 621 86 62 64 83 129 83 260 0 135 -13 212 -45 278 -79 162 -299 283 -568 313 -107 12 -139 12 -247 0z"/> <path d="M12106 4920 c-122 -15 -209 -41 -313 -92 -118 -57 -199 -128 -248 -218 l-30 -55 0 -185 0 -185 31 -55 c39 -69 111 -126 179 -141 33 -7 213 -9 540 -7 l490 3 53 30 c68 37 126 115 143 192 9 40 10 91 3 196 -8 123 -13 149 -36 197 -70 142 -250 259 -468 304 -97 19 -256 27 -344 16z"/> </g> </svg>
         <span class="tip">LetsDefend</span>
       </a>
@@ -630,6 +536,50 @@
   <div><span class="brand">securityz0</span> // case.log — TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
   <div>&copy; 2026 Alisson</div>
 </footer>
+
+<script>
+  // Decrypt text animation for hero name
+  (function(){
+    const target = "ALISSON";
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*";
+    const el = document.getElementById('decryptText');
+    let frame = 0;
+    const totalFrames = 24;
+
+    function decryptFrame(){
+      let output = "";
+      for(let i=0; i<target.length; i++){
+        if(frame > i * 2){
+          output += target[i];
+        } else {
+          output += chars[Math.floor(Math.random()*chars.length)];
+        }
+      }
+      el.textContent = output;
+      frame++;
+      if(frame < totalFrames + target.length*2){
+        setTimeout(()=>requestAnimationFrame(decryptFrame), 35);
+      } else {
+        el.textContent = target;
+      }
+    }
+    setTimeout(decryptFrame, 500);
+  })();
+
+  // Scroll reveal for sections
+  (function(){
+    const revealEls = document.querySelectorAll('.reveal');
+    if(!revealEls.length) return;
+    const observer = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          entry.target.classList.add('in');
+        }
+      });
+    }, {threshold:0.12});
+    revealEls.forEach(el=>observer.observe(el));
+  })();
+</script>
 
 </body>
 </html>
