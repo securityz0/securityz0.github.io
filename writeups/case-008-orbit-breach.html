@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Breach: Satellite Ground Station Compromise | Alisson</title>
+<meta name="description" content="Network forensics case study: reconstructing a VPN-to-satellite-command intrusion chain from a single PCAP capture, including a parallel decoy session.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#a855f7; --blue-bright:#c9a6ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(24px,4vw,38px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{border-left:2px solid var(--blue); background:var(--panel); padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  .decoy-compare{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px;}
+  .decoy-col{border:1px solid var(--border); background:var(--panel); padding:18px 20px;}
+  .decoy-col .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:12px;}
+  .decoy-col.real .k{color:var(--blue-bright);}
+  .decoy-col dl{font-size:12.5px; color:var(--muted-2);}
+  .decoy-col dt{color:var(--muted); font-size:10.5px; text-transform:uppercase; margin-top:10px;}
+  .decoy-col dd{color:var(--text); margin-top:2px; word-break:break-all;}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    .decoy-compare{grid-template-columns:1fr;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Network Forensics</div>
+  <h1>Orbit Breach: Satellite Ground Station Compromise</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Network Forensics</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Source</div>
+      <div class="v">HoneySat-NET-01 (single PCAP)</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Packet capture &amp; TCP stream analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1133 External Remote Services</span>
+        <span class="mitre-chip">T1071.001 Web Protocols</span>
+        <span class="mitre-chip">T1021.004 Remote Services: SSH</span>
+        <span class="mitre-chip">T1078 Valid Accounts</span>
+        <span class="mitre-chip">T1562.001 Impair Defenses</span>
+        <span class="mitre-chip">T1070 Indicator Removal</span>
+        <span class="mitre-chip">T1041 Exfiltration Over C2 Channel</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    A single packet capture from Cairo Ground Station's HoneySat-NET-01 was reconstructed end to end.
+    Three concurrent VPN logins were observed, one legitimate and two malicious. One of the malicious
+    sessions belonged to the attacker, who beaconed to external C2 infrastructure over TLS, then pivoted
+    via SSH into the satellite TT&amp;C environment using an anomalous service account. From there, a full
+    satellite command sequence was executed &mdash; ending in disabled transmission authentication,
+    exfiltration of a 249,856-byte navigation data bundle, and anti-forensics cleanup. The second malicious
+    session was identified as a fully separate decoy chain targeting a decoy satellite asset, distinguished
+    from the real intrusion by its JA3 TLS fingerprint.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#decoy">Decoy Session Analysis</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    Night shift at Cairo Ground Station was supposed to be routine. By dawn, operators reported irregular
+    behavior on orbital support systems, while automated monitoring insisted most traffic was normal.
+  </p>
+  <p>
+    A single network capture from HoneySat-NET-01 was provided for investigation &mdash; containing
+    telemetry chatter, operator access, scheduled sync jobs, and unknown external activity woven into the
+    same timeline. The objective was to reconstruct what actually happened directly from packet evidence.
+  </p>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Value</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact">VPN Logins Observed</td><td data-label="Value" class="mono">3 concurrent sessions (udp/1194)</td><td data-label="Why">Required separating legitimate from malicious activity before further analysis</td></tr>
+      <tr><td data-label="Artifact">Legitimate Login</td><td data-label="Value" class="mono">198.18.5.44</td><td data-label="Why">Confirmed benign, ruled out early</td></tr>
+      <tr><td data-label="Artifact">Attacker VPN Source</td><td data-label="Value" class="mono">185.193.88.31</td><td data-label="Why">Identified as the malicious source behind the primary intrusion</td></tr>
+      <tr><td data-label="Artifact">Attacker VPN Session</td><td data-label="Value" class="mono">SES-VPN771A</td><td data-label="Why">Session ID used to trace the attacker's activity through the capture</td></tr>
+      <tr><td data-label="Artifact">C2 Endpoint</td><td data-label="Value" class="mono">45.9.148.77:443 (SNI: api.orbit-sync.com)</td><td data-label="Why">External infrastructure contacted from the VPN host</td></tr>
+      <tr><td data-label="Artifact">TT&amp;C Pivot Host</td><td data-label="Value" class="mono">172.21.1.9</td><td data-label="Why">Internal satellite control host reached via SSH from the VPN host</td></tr>
+      <tr><td data-label="Artifact">TT&amp;C Session</td><td data-label="Value" class="mono">SES-5700 (ops-backup / svc-ephem)</td><td data-label="Why">Session executing the satellite command sequence</td></tr>
+      <tr><td data-label="Artifact">Command Sequence</td><td data-label="Value" class="mono">TC_OBDH_GET_STATUS &hellip; TC_OBDH_LOG_ROTATE_NOW</td><td data-label="Why">Full sequence of TT&amp;C commands issued during the intrusion</td></tr>
+      <tr><td data-label="Artifact">Exfiltration Destination</td><td data-label="Value" class="mono">104.244.77.12:9443</td><td data-label="Why">External destination for the exported navigation bundle</td></tr>
+      <tr><td data-label="Artifact">Exfiltrated Volume</td><td data-label="Value" class="mono">249,856 bytes (3 chunks)</td><td data-label="Why">Confirmed successful transfer of the navigation data bundle</td></tr>
+      <tr><td data-label="Artifact">Decoy VPN Session</td><td data-label="Value" class="mono">SES-VPN-882B (146.70.19.33)</td><td data-label="Why">Parallel session later confirmed to be a decoy chain</td></tr>
+      <tr><td data-label="Artifact">JA3 Fingerprints</td><td data-label="Value" class="mono">72a589d... (real) / 6734f37... (decoy)</td><td data-label="Why">Distinguished the real C2 channel from the decoy channel</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Sequence</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Seq">Start</td><td data-label="Event">Three VPN logins observed on udp.port == 1194: 198.18.5.44 (legitimate), 185.193.88.31 (attacker), 146.70.19.33 (later confirmed decoy)</td><td data-label="Source" class="mono">udp.port == 1194</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">Attacker session SES-VPN771A identified from 185.193.88.31 as the malicious session requiring further tracing</td><td data-label="Source" class="mono">VPN session log</td></tr>
+      <tr><td data-label="Seq">Shortly after</td><td data-label="Event">C2 beacon from VPN host 10.77.0.5 to 45.9.148.77:443 (api.orbit-sync.com)</td><td data-label="Source" class="mono">tcp.port == 443</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">SSH pivot from 10.77.0.5 to TT&amp;C uplink host 172.21.1.9 (ops-backup); anomalous svc-ephem authentication observed</td><td data-label="Source" class="mono">SSH session log</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_OBDH_GET_STATUS accepted</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_PROP_THRUSTER_PULSE_TEST rejected by safety interlock</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_ADCS_SET_MODE_SAFE accepted; HSAT-LEO-07 forced into safe mode</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_FDIR_SET_AUDIT_SINK_NULL &mdash; audit destination set to NULL</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_COMMS_DISABLE_TX_AUTH &mdash; transmission authentication removed</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_FDS_EXPORT_NAV_BUNDLE executed; 3 chunks (86,016 / 122,880 / 40,960 bytes) sent to 104.244.77.12:9443</td><td data-label="Source" class="mono">Data-transfer packets</td></tr>
+      <tr><td data-label="Seq">Next</td><td data-label="Event">TC_FDIR_CLEAR_ALERT_QUEUE and TC_OBDH_LOG_ROTATE_NOW executed (anti-forensics)</td><td data-label="Source" class="mono">SES-5700 TCP stream</td></tr>
+      <tr><td data-label="Seq">2026-02-14 02:28:16 UTC</td><td data-label="Event">Session SES-5700 terminated</td><td data-label="Source" class="mono">Session log</td></tr>
+      <tr><td data-label="Seq">2026-02-14 03:00:14 UTC</td><td data-label="Event">Unrelated large transfer to internal host 10.88.9.20 (ruled out)</td><td data-label="Source" class="mono">PCAP</td></tr>
+      <tr><td data-label="Seq">2026-02-14 03:50:59 UTC</td><td data-label="Event">Final SYN to port 8022 from 77.91.124.165, post-session (unrelated)</td><td data-label="Source" class="mono">PCAP</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>Three concurrent VPN logins were observed; one legitimate (198.18.5.44) was ruled out early, leaving two to investigate further &mdash; the attacker session (185.193.88.31, SES-VPN771A) and what was later confirmed as a decoy session.</li>
+    <li>A C2 beacon to api.orbit-sync.com was identified via TLS SNI on the legitimate vendor VPN's outbound path.</li>
+    <li>The attacker pivoted via SSH into the TT&amp;C uplink host and authenticated as svc-ephem from an IP inconsistent with that account's legitimate usage pattern.</li>
+    <li>A full satellite command sequence was reconstructed: status check &rarr; rejected thruster test &rarr; forced safe mode &rarr; audit sink nulled &rarr; transmission auth disabled &rarr; navigation bundle exported.</li>
+    <li>249,856 bytes of navigation data were confirmed transferred to 104.244.77.12:9443 across three packet chunks.</li>
+    <li>Anti-forensics commands (alert queue clear, log rotation) were executed immediately after exfiltration completed.</li>
+    <li>A second, parallel VPN session was traced to a fully separate decoy chain targeting a decoy satellite asset, confirmed distinct via JA3 fingerprint comparison.</li>
+    <li>Two additional artifacts &mdash; a large internal-destination transfer and a late external SYN &mdash; were investigated and ruled out as unrelated to the primary intrusion.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Initial Access</div><div class="desc">Attacker VPN login from 185.193.88.31 (session SES-VPN771A) identified among three concurrent logins by ruling out the legitimate session first.</div></div>
+    <div class="chain-step"><div class="stage">Command &amp; Control</div><div class="desc">Beacon from VPN host 10.77.0.5 to api.orbit-sync.com over TLS (443).</div></div>
+    <div class="chain-step"><div class="stage">Lateral Movement</div><div class="desc">SSH pivot to internal TT&amp;C uplink host 172.21.1.9; anomalous svc-ephem authentication.</div></div>
+    <div class="chain-step"><div class="stage">Execution (ICS)</div><div class="desc">Satellite command sequence issued: status check, forced safe mode, audit sink nulled, TX auth disabled.</div></div>
+    <div class="chain-step"><div class="stage">Exfiltration</div><div class="desc">Navigation bundle exported and transferred (249,856 bytes) to 104.244.77.12:9443.</div></div>
+    <div class="chain-step"><div class="stage">Anti-Forensics</div><div class="desc">Alert queue cleared, logs rotated, session terminated.</div></div>
+  </div>
+
+  <h2 id="decoy">Decoy Session Analysis</h2>
+  <p>
+    A second malicious VPN session running alongside the attacker's session was investigated to determine
+    whether it was related activity. Its traffic led through a separate internal pivot host (10.77.0.7) to
+    a different TT&amp;C target host (172.21.9.9), reaching a decoy satellite asset entirely &mdash; not the
+    real target of the intrusion.
+  </p>
+  <div class="decoy-compare">
+    <div class="decoy-col real">
+      <div class="k">Real Intrusion Chain</div>
+      <dl>
+        <dt>VPN Session</dt><dd>SES-VPN771A (185.193.88.31)</dd>
+        <dt>Internal Host</dt><dd>10.77.0.5 &rarr; 172.21.1.9</dd>
+        <dt>TT&amp;C Session</dt><dd>SES-5700 &rarr; HSAT-LEO-07</dd>
+        <dt>C2 / Exfil</dt><dd>45.9.148.77 &middot; 104.244.77.12:9443 (249,856 bytes)</dd>
+        <dt>JA3 Fingerprint</dt><dd>72a589da586844d7f0818ce684948eea</dd>
+      </dl>
+    </div>
+    <div class="decoy-col">
+      <div class="k">Decoy Chain</div>
+      <dl>
+        <dt>VPN Session</dt><dd>SES-VPN-882B (146.70.19.33)</dd>
+        <dt>Internal Host</dt><dd>10.77.0.7 &rarr; 172.21.9.9</dd>
+        <dt>TT&amp;C Session</dt><dd>SES-5711 &rarr; HSAT-LEO-07-DECOY</dd>
+        <dt>C2 / Exfil</dt><dd>198.51.100.250 &middot; 203.0.113.200 (32,768 bytes)</dd>
+        <dt>JA3 Fingerprint</dt><dd>6734f37431670b3ab4292b8f60f29984</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="callout">
+    Overlapping C2 channels initially appeared related; comparing JA3 TLS fingerprints was the deciding
+    factor in confirming these were two independent chains rather than one.
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Started by filtering udp.port == 1194 and found three concurrent VPN logins; ruled out the legitimate one first, then had two remaining sessions to trace independently.</div>
+    <div class="note-line">Filtered on the VPN host's IP and tcp.port == 443 to identify the outbound C2 beacon and its TLS SNI.</div>
+    <div class="note-line">Followed the SSH session into the TT&amp;C environment and cross-referenced the authenticating account against known legitimate svc-ephem usage to flag it as anomalous.</div>
+    <div class="note-line">Reconstructed the full command sequence by following the SES-5700 TCP stream end to end, rather than relying on isolated packets.</div>
+    <div class="note-line">Verified actual data transfer volume against the export command by tracing the subsequent data-transfer packets, rather than assuming export success.</div>
+    <div class="note-line">Investigated two additional artifacts (a large internal transfer and a late external SYN) and ruled both out based on destination and timing rather than dismissing or including them without verification.</div>
+    <div class="note-line">Compared JA3 fingerprints between the two parallel C2 channels to confirm the second session was an unrelated decoy chain, not a second stage of the same intrusion.</div>
+  </div>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
