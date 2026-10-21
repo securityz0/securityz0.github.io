@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portfolio | Alisson</title>
-<meta name="description" content="Alisson — Blue Team, DFIR, Detection Engineering &amp; Threat Hunting portfolio.">
+<meta name="description" content="Alisson — Blue Team, DFIR &amp; Threat Hunting portfolio.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
@@ -17,8 +17,8 @@
     --panel-2:#0e1420;
     --border:#1c2536;
     --border-bright:#2b3a52;
-    --blue:#a855f7;
-    --blue-bright:#c9a6ff;
+    --blue:#3b82f6;
+    --blue-bright:#7cb2ff;
     --text:#e6ecf5;
     --muted:#65728a;
     --muted-2:#8a97ad;
@@ -39,8 +39,8 @@
     content:"";
     position:fixed; inset:0;
     background-image:
-      linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
     background-size:42px 42px;
     pointer-events:none;
     z-index:0;
@@ -100,7 +100,7 @@
     text-transform:uppercase;
     background:linear-gradient(180deg, #ffffff 0%, var(--blue-bright) 120%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow:0 0 60px rgba(168,85,247,0.25);
+    text-shadow:0 0 60px rgba(59,130,246,0.25);
     opacity:0; animation:fadeIn .6s ease forwards; animation-delay:.5s;
   }
   .hero .cursor{
@@ -128,7 +128,7 @@
   }
   .btn:hover{border-color:var(--blue); color:var(--blue-bright); box-shadow:0 0 0 1px var(--blue) inset;}
   .btn.primary{background:var(--blue); border-color:var(--blue); color:#04101f; font-weight:700;}
-  .btn.primary:hover{background:var(--blue-bright); box-shadow:0 0 24px rgba(168,85,247,.5);}
+  .btn.primary:hover{background:var(--blue-bright); box-shadow:0 0 24px rgba(59,130,246,.5);}
 
   .scroll-hint{
     position:absolute; bottom:36px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--muted);
@@ -238,7 +238,7 @@
     background:var(--panel); position:relative; cursor:pointer;
     transition:border-color .2s, transform .2s, box-shadow .2s;
   }
-  .icon-btn:hover{border-color:var(--blue); transform:translateY(-4px); box-shadow:0 0 18px rgba(168,85,247,.35);}
+  .icon-btn:hover{border-color:var(--blue); transform:translateY(-4px); box-shadow:0 0 18px rgba(59,130,246,.35);}
   .icon-btn svg{width:20px; height:20px; fill:var(--muted-2); color:var(--muted-2); transition:fill .2s, color .2s;}
   .icon-btn:hover svg{fill:var(--blue-bright); color:var(--blue-bright);}
   .icon-btn .tip{
@@ -315,8 +315,8 @@
 
   <p class="hero-sub">
     <span class="role">Blue Team</span> security enthusiast focused on
-    <span class="role">DFIR</span>, <span class="role">Detection Engineering</span>,
-    <span class="role">Threat Hunting</span> &amp; <span class="role">Security Operations</span>.
+    <span class="role">DFIR</span>, <span class="role">Threat Hunting</span> &amp;
+    <span class="role">Security Operations</span>.
   </p>
 
   <div class="hero-cta">
@@ -339,7 +339,7 @@
         <p class="prompt">cat about.md</p>
         <p>
           I'm a Blue Team security enthusiast focused on Digital Forensics &amp; Incident Response (DFIR),
-          Detection Engineering, Threat Hunting, and Security Operations.
+          Threat Hunting, and Security Operations.
         </p>
         <p>
           I enjoy investigating real-world attack scenarios, building home lab environments, and
@@ -357,7 +357,7 @@
       </div>
       <div class="fact">
         <div class="k">Focus</div>
-        <div class="v">DFIR &amp; Detection Engineering</div>
+        <div class="v">DFIR &amp; Threat Hunting</div>
       </div>
       <div class="fact">
         <div class="k">Interest</div>
@@ -381,17 +381,12 @@
       <span class="ftags">Memory Forensics &middot; Disk Imaging &middot; Timeline Reconstruction &middot; Artifact Analysis</span>
     </div>
     <div class="flow-line">
-      <span class="fcode">DE-02</span>
-      <span class="ftitle">Detection Engineering</span>
-      <span class="ftags">Log Correlation &middot; IOC/IOA Development &middot; Detection Tuning</span>
-    </div>
-    <div class="flow-line">
-      <span class="fcode">TH-03</span>
+      <span class="fcode">TH-02</span>
       <span class="ftitle">Threat Hunting</span>
       <span class="ftags">Hypothesis-Driven Hunting &middot; ATT&amp;CK Mapping &middot; Anomaly Detection</span>
     </div>
     <div class="flow-line">
-      <span class="fcode">SO-04</span>
+      <span class="fcode">SO-03</span>
       <span class="ftitle">Security Operations</span>
       <span class="ftags">Alert Triage &middot; Incident Response Workflows &middot; Chain of Custody</span>
     </div>
@@ -523,7 +518,7 @@
 
 <script>
   function copyEmail(){
-    var email = "alissonporto05@gmail.com";
+    var email = "youremail@example.com";
     navigator.clipboard.writeText(email).then(function(){
       var toast = document.getElementById('toast');
       toast.classList.add('show');
