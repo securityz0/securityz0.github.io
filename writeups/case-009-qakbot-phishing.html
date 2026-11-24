@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qakbot Phishing: Macro Execution and Host Reconnaissance | Alisson</title>
+<meta name="description" content="Malware case study: tracing a Qakbot-style phishing chain from a 7z attachment through a macro-enabled workbook, a malicious shortcut and a reconnaissance batch script.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#3b82f6; --blue-bright:#7cb2ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(24px,4vw,38px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{border-left:2px solid var(--blue); background:var(--panel); padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;}
+  .callout.warn{border-left-color:#fbbf24;}
+  .callout.warn .k{color:#fbbf24; font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; display:block; margin-bottom:8px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px; overflow-wrap:anywhere;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .findings li.flag::before{content:"⚠"; color:#fbbf24;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Malware</div>
+  <h1>Qakbot Phishing: Macro Execution and Host Reconnaissance</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Malware</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Host</div>
+      <div class="v">Robert (172.16.17.189)</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Email, network &amp; static file analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1566 Phishing</span>
+        <span class="mitre-chip">T1204.002 User Execution</span>
+        <span class="mitre-chip">T1059.005 Visual Basic</span>
+        <span class="mitre-chip">T1218.010 Regsvr32</span>
+        <span class="mitre-chip">T1059.003 Windows Command Shell</span>
+        <span class="mitre-chip">T1105 Ingress Tool Transfer</span>
+        <span class="mitre-chip">T1033 System Owner/User Discovery</span>
+        <span class="mitre-chip">T1016 Network Configuration Discovery</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    A Critical alert for suspected Qakbot activity fired on host Robert on 14 July 2023 at 05:32:35 UTC.
+    The trigger was a phishing email, delivered the day before, carrying a 7z archive presented as a
+    presentation. The archive held a macro-enabled Excel workbook, a malicious shortcut (readme.lnk) and a
+    hidden batch script (ad.bat). Shortly after the workbook ran, EXCEL.EXE requested the same .dat file from
+    three different external IP addresses over plain HTTP, while the shortcut launched cmd.exe to run ad.bat
+    &mdash; a script that enumerates the user, network, domain and shares, force-terminates two Windows
+    processes and attempts to repair the WebCache database. The behaviour is consistent with Qakbot and an
+    attempt to run malicious code and prepare further compromise. The alert was assessed as a true positive.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#script">ad.bat Analysis</a></li>
+      <li><a href="#iocs">Indicators of Compromise</a></li>
+      <li><a href="#actions">Recommended Actions</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    A Critical alert, classified as Data Leakage, fired on workstation Robert (172.16.17.189) on 14 July 2023
+    at 05:32:35 UTC (08:32:35 +03:00). The first-line analyst had found an email with a suspicious attachment
+    and a ZIP &rarr; LNK &rarr; BAT execution chain that strongly suggested Qakbot, and escalated the case.
+  </p>
+  <p>
+    This investigation picks up the escalation: confirm whether the alert is a true positive, trace it back to
+    the delivery email, analyse the attached files, and establish what actually ran on the host.
+  </p>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Value</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact">Phishing email</td><td data-label="Value" class="mono">zirtto@digitalzedi[.]com &rarr; robert@letsdefend.io, 2023-07-13 13:39:00, sender IP 201.226.241.213</td><td data-label="Why">Delivery vector; the gateway action was Allowed</td></tr>
+      <tr><td data-label="Artifact">Attachment</td><td data-label="Value" class="mono">form.7z</td><td data-label="Why">Archive containing the workbook, the shortcut and a hidden script</td></tr>
+      <tr><td data-label="Artifact">Workbook</td><td data-label="Value" class="mono">form_1484004552-07142023.xls &middot; MD5 f9191123817870609289c3f9f8d4c3c5</td><td data-label="Why">Macro-enabled workbook; hash for hunting</td></tr>
+      <tr><td data-label="Artifact">Macro indicators</td><td data-label="Value" class="mono">auto_open &middot; hidden sheet content &middot; dynamic formulas &middot; Application.Run &middot; EXEC &middot; regsvr32 -silent ..\Drezd.red</td><td data-label="Why">Automatic, concealed execution of payload-related commands</td></tr>
+      <tr><td data-label="Artifact">Shortcut</td><td data-label="Value" class="mono">readme.lnk &rarr; cmd.exe /c "C:\Users\LetsDefend\Downloads\form\ad.bat"</td><td data-label="Why">Launches the batch script through cmd.exe</td></tr>
+      <tr><td data-label="Artifact">Batch script</td><td data-label="Value" class="mono">ad.bat (hidden)</td><td data-label="Why">Host, network and domain reconnaissance plus system tampering</td></tr>
+      <tr><td data-label="Artifact">Network requests</td><td data-label="Value" class="mono">EXCEL.EXE (PID 4364) &rarr; GET /45121.3553172454.dat on 3 hosts, port 80</td><td data-label="Why">Same payload name requested from three IPs; all permitted by the firewall</td></tr>
+      <tr><td data-label="Artifact">WebCache check</td><td data-label="Value" class="mono">AppData\Local\Microsoft\Windows</td><td data-label="Why">No WebCache folder or WebCacheV01.dat found on the evidence left on the endpoint</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="callout">
+    Log-management times are UTC. Sysmon timestamps appear three hours later, which matches the +03:00 offset
+    on the alert.
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Time (UTC)</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Time">2023-07-13 13:39:00</td><td data-label="Event">Phishing email with form.7z delivered; gateway action Allowed (time as recorded in the email)</td><td data-label="Source" class="mono">Email security</td></tr>
+      <tr><td data-label="Time">2023-07-14 05:31:13 &ndash; 05:31:19</td><td data-label="Event">EXCEL.EXE makes normal Microsoft Office connections over HTTPS (officeapps.live.com), with matching DNS lookups</td><td data-label="Source" class="mono">Firewall, Sysmon EID 22</td></tr>
+      <tr><td data-label="Time">2023-07-14 05:32:00</td><td data-label="Event">EXCEL.EXE requests /45121.3553172454.dat from 111.90.151.238:80 and 190.14.37.241:80</td><td data-label="Source" class="mono">Firewall</td></tr>
+      <tr><td data-label="Time">2023-07-14 05:32:01</td><td data-label="Event">EXCEL.EXE requests /45121.3553172454.dat from 84.32.188.11:80</td><td data-label="Source" class="mono">Firewall</td></tr>
+      <tr><td data-label="Time">2023-07-14 05:32:35</td><td data-label="Event">Alert fires (08:32:35 +03:00)</td><td data-label="Source" class="mono">SIEM alert</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>A phishing email carrying a 7z archive presented as a presentation passed the email gateway (action: Allowed).</li>
+    <li>The archive held a macro-enabled workbook, a malicious shortcut (readme.lnk) and a hidden batch script (ad.bat).</li>
+    <li>The workbook macro runs automatically on open, hides worksheet content, builds its formulas dynamically, executes indirectly through Application.Run and references several external payload-like files, including a <span class="mono">regsvr32 -silent ..\Drezd.red</span> command.</li>
+    <li>After normal Office traffic, EXCEL.EXE (PID 4364) requested the same .dat file from three unrelated external IPs over unencrypted HTTP, a pattern consistent with a macro using fallback servers.</li>
+    <li>readme.lnk launches cmd.exe, which runs ad.bat to enumerate the user, network, domain, shares and local groups, force-terminate taskhostw.exe and dllhost.exe, and attempt recovery of the WebCache database.</li>
+    <li>The alert was assessed as a true positive consistent with Qakbot activity; escalation to incident response is warranted.</li>
+    <li class="flag">Not confirmed: the logs show the three payload requests being permitted, but not whether any payload was actually delivered.</li>
+    <li class="flag">Not confirmed: the WebCache folder and WebCacheV01.dat targeted by ad.bat were not present in AppData\Local\Microsoft\Windows on the evidence left on the endpoint, so recovery of browser data by the script is not confirmed.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Delivery</div><div class="desc">Phishing email from zirtto@digitalzedi[.]com with form.7z attached, allowed through the gateway.</div></div>
+    <div class="chain-step"><div class="stage">Execution (workbook)</div><div class="desc">The workbook macro runs on open, conceals its content and calls payload-related commands, including regsvr32.</div></div>
+    <div class="chain-step"><div class="stage">Payload Retrieval</div><div class="desc">EXCEL.EXE requests 45121.3553172454.dat from three external IPs over HTTP port 80.</div></div>
+    <div class="chain-step"><div class="stage">Execution (shortcut)</div><div class="desc">readme.lnk starts cmd.exe /c, which runs the hidden ad.bat from the extracted folder.</div></div>
+    <div class="chain-step"><div class="stage">Discovery</div><div class="desc">ad.bat enumerates user, environment, ARP, network configuration, domain controller, shares, routes, connections and local groups.</div></div>
+    <div class="chain-step"><div class="stage">System Tampering</div><div class="desc">taskhostw.exe and dllhost.exe are force-terminated, then esentutl is run against the WebCache database.</div></div>
+  </div>
+
+  <h2 id="script">ad.bat Analysis</h2>
+  <p>
+    The batch script is the reconnaissance and preparation stage. Every command below ran from the extracted
+    form folder through the shortcut&rsquo;s cmd.exe.
+  </p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Command" class="mono">whoami /all</td><td data-label="Purpose">Current user, group memberships and privileges</td></tr>
+      <tr><td data-label="Command" class="mono">cmd /c set</td><td data-label="Purpose">Environment variables</td></tr>
+      <tr><td data-label="Command" class="mono">arp -a</td><td data-label="Purpose">Hosts the machine has recently talked to on the local network</td></tr>
+      <tr><td data-label="Command" class="mono">ipconfig /all</td><td data-label="Purpose">Network adapter and DNS configuration</td></tr>
+      <tr><td data-label="Command" class="mono">net view /all</td><td data-label="Purpose">Other systems and shares visible on the network</td></tr>
+      <tr><td data-label="Command" class="mono">nslookup -querytype=ALL -timeout=10 _ldap.tcp.dc._msdc.letsdefend</td><td data-label="Purpose">Locates the domain controllers through DNS</td></tr>
+      <tr><td data-label="Command" class="mono">net share</td><td data-label="Purpose">Shares exposed by this machine</td></tr>
+      <tr><td data-label="Command" class="mono">route print</td><td data-label="Purpose">Routing table</td></tr>
+      <tr><td data-label="Command" class="mono">netstat -nao</td><td data-label="Purpose">Active connections and owning process IDs</td></tr>
+      <tr><td data-label="Command" class="mono">net localgroup</td><td data-label="Purpose">Local groups</td></tr>
+      <tr><td data-label="Command" class="mono">taskkill /IM taskhostw.exe /IM dllhost.exe /F</td><td data-label="Purpose">Force-terminates two Windows processes</td></tr>
+      <tr><td data-label="Command" class="mono">esentutl.exe /r V01 /l"C:\Users\LetsDefend\AppData\Local\Microsoft\Windows\WebCache" /s"&hellip;WebCache" /d"&hellip;WebCache"</td><td data-label="Purpose">Attempts recovery of the ESE database V01 using the WebCache directories</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="callout warn">
+    <span class="k">Inference, not log-confirmed</span>
+    Terminating taskhostw.exe before running esentutl on the WebCache directories suggests an attempt to make
+    the browser database readable. This is read from the commands themselves; no log confirms the intent or
+    the result.
+  </div>
+
+  <h2 id="iocs">Indicators of Compromise</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Type</th><th>Value</th><th>Context</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Type">IP (HTTP)</td><td data-label="Value" class="mono">111.90.151.238</td><td data-label="Context">Requested for 45121.3553172454.dat</td></tr>
+      <tr><td data-label="Type">IP (HTTP)</td><td data-label="Value" class="mono">190.14.37.241</td><td data-label="Context">Requested for 45121.3553172454.dat</td></tr>
+      <tr><td data-label="Type">IP (HTTP)</td><td data-label="Value" class="mono">84.32.188.11</td><td data-label="Context">Requested for 45121.3553172454.dat</td></tr>
+      <tr><td data-label="Type">IP (email)</td><td data-label="Value" class="mono">201.226.241.213</td><td data-label="Context">Phishing email sender IP</td></tr>
+      <tr><td data-label="Type">Email</td><td data-label="Value" class="mono">zirtto@digitalzedi[.]com</td><td data-label="Context">Phishing sender</td></tr>
+      <tr><td data-label="Type">Subject</td><td data-label="Value" class="mono">Questions Creating Delivery Using Open APIs</td><td data-label="Context">Phishing email</td></tr>
+      <tr><td data-label="Type">File</td><td data-label="Value" class="mono">form.7z</td><td data-label="Context">Email attachment</td></tr>
+      <tr><td data-label="Type">File</td><td data-label="Value" class="mono">form_1484004552-07142023.xls</td><td data-label="Context">Macro-enabled workbook</td></tr>
+      <tr><td data-label="Type">MD5</td><td data-label="Value" class="mono">f9191123817870609289c3f9f8d4c3c5</td><td data-label="Context">form_1484004552-07142023.xls</td></tr>
+      <tr><td data-label="Type">File</td><td data-label="Value" class="mono">readme.lnk</td><td data-label="Context">Launches cmd.exe /c ad.bat</td></tr>
+      <tr><td data-label="Type">MD5</td><td data-label="Value" class="mono">c868ee195d4ae11ee09c9ea0ec5f4a6d</td><td data-label="Context">readme.lnk</td></tr>
+      <tr><td data-label="Type">File (hidden)</td><td data-label="Value" class="mono">ad.bat</td><td data-label="Context">Reconnaissance / WebCache script</td></tr>
+      <tr><td data-label="Type">MD5</td><td data-label="Value" class="mono">d868a643d42e435700806d981f597b97</td><td data-label="Context">ad.bat</td></tr>
+      <tr><td data-label="Type">Payload name</td><td data-label="Value" class="mono">45121.3553172454.dat</td><td data-label="Context">Requested by EXCEL.EXE</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="actions">Recommended Actions</h2>
+  <p>These are recommendations from the investigation, not findings.</p>
+  <ul class="findings">
+    <li>Isolate Robert (172.16.17.189) and escalate to incident response.</li>
+    <li>Block 111.90.151.238, 190.14.37.241, 84.32.188.11 and 201.226.241.213, and the sender domain digitalzedi[.]com.</li>
+    <li>Hunt across endpoints for readme.lnk, ad.bat, the file hashes and requests for 45121.3553172454.dat.</li>
+    <li>Search the mail system for other messages from the same sender or carrying form.7z, and remove them.</li>
+    <li>Reset credentials for the affected user and review other activity from the host.</li>
+    <li>Block or tightly restrict macro execution in files received from the internet.</li>
+  </ul>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Started from the alert and the L1 note, then pivoted to the delivery email to establish how the files reached the host.</div>
+    <div class="note-line">Filtered log management on the host IP: normal Office traffic first, then plain-HTTP requests from EXCEL.EXE to three unrelated hosts, all permitted.</div>
+    <div class="note-line">Requesting one payload name from three IPs right after the Microsoft connections is typical of a macro working through fallback servers.</div>
+    <div class="note-line">Reconciled time zones before building the timeline: log-management times are UTC, Sysmon is three hours later, which matches the alert&rsquo;s +03:00 offset.</div>
+    <div class="note-line">Parsed readme.lnk to confirm it runs cmd.exe /c against ad.bat, and read the strings extracted from the workbook to confirm the macro indicators.</div>
+    <div class="note-line">Checked AppData\Local\Microsoft\Windows, the path the script targets, for WebCache data and found none on the evidence left on the endpoint.</div>
+    <div class="note-line">The evidence timestamps the workbook&rsquo;s network activity and the alert, but does not separately timestamp the cmd.exe and ad.bat run, so the order of the two execution paths is not established.</div>
+  </div>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
