@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fodhelper UAC Bypass: From Phishing Link to Rogue Admin Account | Alisson</title>
+<meta name="description" content="Malware case study: tracing a phishing link to a UAC bypass through fodhelper.exe and the local administrator account it created, with Sysmon, registry and binary evidence.">
+<style>
+  :root{
+    --bg:#05070d; --panel:#0b0f1a; --panel-2:#0e1420; --border:#1c2536; --border-bright:#2b3a52;
+    --blue:#3b82f6; --blue-bright:#7cb2ff; --text:#e6ecf5; --muted:#65728a; --muted-2:#8a97ad;
+    --mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:var(--mono); line-height:1.7; overflow-x:hidden;}
+  body::before{
+    content:""; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px);
+    background-size:42px 42px; pointer-events:none; z-index:0;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:70px 6vw 120px;}
+  .back{display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted-2); margin-bottom:44px; transition:color .2s;}
+  .back:hover{color:var(--blue-bright);}
+  .case-tag{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--blue-bright); border:1px solid var(--blue); display:inline-block; padding:4px 10px; margin-bottom:20px;}
+  h1{font-size:clamp(24px,4vw,38px); line-height:1.25; margin-bottom:22px; text-transform:uppercase; letter-spacing:-.01em;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:28px; margin-bottom:50px; padding-bottom:26px; border-bottom:1px solid var(--border);}
+  .meta-item .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);}
+  .meta-item .v{font-size:13.5px; color:var(--text); margin-top:4px;}
+  .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--blue-bright); margin-right:6px; box-shadow:0 0 8px var(--blue-bright);}
+  .mitre-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;}
+  .mitre-chip{font-size:11px; font-family:var(--mono); color:var(--blue-bright); border:1px solid var(--border-bright); padding:2px 7px;}
+  .exec-summary{background:var(--panel); border:1px solid var(--border); border-left:2px solid var(--blue); padding:20px 22px; margin-bottom:46px; font-size:13.5px; color:var(--muted-2);}
+  .exec-summary .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--blue-bright); margin-bottom:10px; display:block;}
+  .toc{border:1px solid var(--border); background:var(--panel); padding:18px 22px; margin-bottom:46px;}
+  .toc .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:12px; display:block;}
+  .toc ol{list-style:none; counter-reset:toc; display:flex; flex-direction:column; gap:7px;}
+  .toc li{counter-increment:toc; font-size:13px;}
+  .toc li::before{content:counter(toc, decimal-leading-zero) "  "; color:var(--muted); font-size:11px;}
+  .toc a{color:var(--muted-2); transition:color .2s;}
+  .toc a:hover{color:var(--blue-bright);}
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--blue-bright); margin:52px 0 20px; display:flex; align-items:center; gap:10px;}
+  h2::before{content:"//"; color:var(--muted);}
+  p{color:var(--muted-2); font-size:14.5px; margin-bottom:14px;}
+  .callout{border-left:2px solid var(--blue); background:var(--panel); padding:14px 18px; font-size:13px; color:var(--muted-2); margin:18px 0;}
+  .callout.warn{border-left-color:#fbbf24;}
+  .callout.warn .k{color:#fbbf24; font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; display:block; margin-bottom:8px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:12.5px;}
+  th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border-bright); background:var(--panel-2);}
+  td{padding:11px 12px; border-bottom:1px solid var(--border); color:var(--muted-2); vertical-align:top;}
+  td.mono, .mono{font-family:var(--mono); color:var(--blue-bright); font-size:12px; overflow-wrap:anywhere;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); background:var(--panel);}
+  .findings{list-style:none;}
+  .findings li{position:relative; padding-left:26px; margin-bottom:12px; font-size:13.5px; color:var(--text);}
+  .findings li::before{content:"✓"; position:absolute; left:0; color:var(--blue-bright); font-size:12px;}
+  .findings li.flag::before{content:"⚠"; color:#fbbf24;}
+  .chain{display:flex; flex-direction:column; border:1px solid var(--border); background:var(--panel);}
+  .chain-step{display:grid; grid-template-columns:170px 1fr; gap:18px; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .chain-step:last-child{border-bottom:none;}
+  .chain-step .stage{color:var(--blue-bright); font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700;}
+  .chain-step .desc{font-size:13px; color:var(--muted-2);}
+  .notes-list{display:flex; flex-direction:column; gap:0;}
+  .note-line{border-left:2px solid var(--border-bright); padding:10px 16px; font-size:13px; color:var(--muted-2); margin-bottom:2px;}
+  .note-line::before{content:"> "; color:var(--blue);}
+  footer{border-top:1px solid var(--border); margin-top:70px; padding-top:26px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  @media (max-width:600px){
+    .chain-step{grid-template-columns:1fr; gap:6px;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    td{border-bottom:none; padding:6px 0;}
+    tr{padding:12px; border-bottom:1px solid var(--border);}
+    td::before{content:attr(data-label); display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:3px;}
+  }
+
+  figure{margin:18px 0 28px;}
+  figure a{display:block; width:fit-content; max-width:100%; border:1px solid var(--border); background:var(--panel); padding:8px; transition:border-color .2s;}
+  figure a:hover{border-color:var(--blue);}
+  figure img{display:block; max-width:100%; height:auto;}
+  figcaption{font-size:12px; color:var(--muted); margin-top:10px; max-width:760px;}
+  figcaption b{color:var(--blue-bright); font-weight:700; margin-right:4px;}
+  ol.steps{list-style:none; counter-reset:s; margin:8px 0 18px;}
+  ol.steps li{counter-increment:s; position:relative; padding-left:38px; margin-bottom:14px; font-size:13.5px; color:var(--muted-2);}
+  ol.steps li::before{content:counter(s); position:absolute; left:0; top:1px; color:var(--blue-bright); border:1px solid var(--border-bright); width:24px; height:24px; text-align:center; font-size:11px; line-height:22px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../index.html#case-studies">&larr; back to portfolio</a>
+
+  <div class="case-tag">Malware</div>
+  <h1>Fodhelper UAC Bypass: From Phishing Link to Rogue Admin Account</h1>
+
+  <div class="meta-row">
+    <div class="meta-item">
+      <div class="k">Category</div>
+      <div class="v">Malware</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Status</div>
+      <div class="v"><span class="status-dot"></span>Complete</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Host</div>
+      <div class="v">Fiona (172.16.17.73)</div>
+    </div>
+    <div class="meta-item">
+      <div class="k">Method</div>
+      <div class="v">Email, Sysmon, registry &amp; binary analysis</div>
+    </div>
+  </div>
+
+  <div class="meta-row" style="border-bottom:none; padding-bottom:0;">
+    <div class="meta-item" style="flex:1;">
+      <div class="k">MITRE ATT&amp;CK</div>
+      <div class="mitre-chips">
+        <span class="mitre-chip">T1566.002 Spearphishing Link</span>
+        <span class="mitre-chip">T1204.002 User Execution</span>
+        <span class="mitre-chip">T1548.002 Bypass User Account Control</span>
+        <span class="mitre-chip">T1112 Modify Registry</span>
+        <span class="mitre-chip">T1059.001 PowerShell</span>
+        <span class="mitre-chip">T1136.001 Create Local Account</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-summary">
+    <span class="k">Executive Summary</span>
+    A High-severity malware alert fired on host Fiona after Missing_DLL.exe called fodhelper.exe. The cause
+    was a phishing email presented as a Microsoft helpdesk message, urging the user to download a &ldquo;DLL
+    package&rdquo; from a link. The link delivered a ZIP from an Amazon S3 bucket. Once its executable ran,
+    it wrote a PowerShell command into the ms-settings registry key under HKCU and launched fodhelper.exe,
+    an auto-elevating Microsoft binary, so the command ran with administrator rights and without a UAC
+    prompt. The command created a local account, onebl00d, and added it to the Administrators group. The
+    registry key and the account were both confirmed on the endpoint. The alert&rsquo;s own timestamp does
+    not line up with the other sources and was not used to order events.
+  </div>
+
+  <div class="toc">
+    <span class="k">Table of Contents</span>
+    <ol>
+      <li><a href="#scenario">Scenario</a></li>
+      <li><a href="#evidence">Evidence Collected</a></li>
+      <li><a href="#delivery">Delivery and Download</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#findings">Key Findings</a></li>
+      <li><a href="#chain">Attack Chain</a></li>
+      <li><a href="#analysis">Malicious File Analysis</a></li>
+      <li><a href="#validation">Endpoint Validation</a></li>
+      <li><a href="#iocs">Indicators of Compromise</a></li>
+      <li><a href="#notes">Analyst Notes</a></li>
+    </ol>
+  </div>
+
+  <h2 id="scenario">Scenario</h2>
+  <p>
+    A High-severity alert, classified as Malware, fired on workstation Fiona (172.16.17.73) when
+    Missing_DLL.exe, running from the user&rsquo;s Downloads folder, called fodhelper.exe, a legitimate
+    Windows process. The first-line analyst noted that only three antivirus engines flagged the file on
+    VirusTotal and escalated it for detailed analysis.
+  </p>
+  <p>
+    The goal was to trace the file back to how it arrived, work out what it did on the host, and confirm
+    the result on the endpoint itself.
+  </p>
+  <figure>
+    <a href="img/case-010/fig1-alert.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig1-alert.png" width="1604" height="464" loading="lazy" alt="Alert details showing a High severity malware alert on host Fiona, with Missing_DLL.exe launching fodhelper.exe">
+    </a>
+    <figcaption><b>Figure 1.</b>Alert details: a High-severity malware alert on host Fiona (172.16.17.73), with Missing_DLL.exe launching fodhelper.exe.</figcaption>
+  </figure>
+
+  <h2 id="evidence">Evidence Collected</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Artifact</th><th>Value</th><th>Why It Mattered</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Artifact">Alert</td><td data-label="Value" class="mono">High &middot; Malware &middot; Missing_DLL.exe &rarr; fodhelper.exe</td><td data-label="Why">Starting point of the investigation</td></tr>
+      <tr><td data-label="Artifact">Phishing email</td><td data-label="Value" class="mono">helpdesk@microsoft[.]com &rarr; fiona@letsdefend.io &middot; &ldquo;Urgent: Download Microsoft DLL Package Now&rdquo; &middot; sender IP 204.8.156.142</td><td data-label="Why">Delivery vector; the gateway action was Allowed</td></tr>
+      <tr><td data-label="Artifact">Exchange log</td><td data-label="Value" class="mono">204.8.156.142:35323 &rarr; 172.16.20.3:25</td><td data-label="Why">Confirms the message reached the mail server</td></tr>
+      <tr><td data-label="Artifact">Browser download</td><td data-label="Value" class="mono">Sysmon EID 15 &middot; chrome.exe &middot; ZoneId=3 &middot; hxxps://files-ld[.]s3[.]us-east-2[.]amazonaws[.]com/Missing_DLL[.]zip</td><td data-label="Why">Shows the link was opened and where the ZIP came from</td></tr>
+      <tr><td data-label="Artifact">File creation</td><td data-label="Value" class="mono">Sysmon EID 11 &middot; Explorer.EXE &middot; C:\Users\LetsDefend\Downloads\Missing_DLL.exe</td><td data-label="Why">The executable was extracted from the ZIP through Explorer</td></tr>
+      <tr><td data-label="Artifact">Registry write</td><td data-label="Value" class="mono">Sysmon EID 13 &middot; Missing_DLL.exe (PID 2216) &middot; HKCU:\Software\Classes\ms-settings\shell\open\command\(Default)</td><td data-label="Why">Staging of the UAC bypass</td></tr>
+      <tr><td data-label="Artifact">Local account</td><td data-label="Value" class="mono">onebl00d &middot; Administrators &middot; last logon Never</td><td data-label="Why">The outcome of the planted command, confirmed on the endpoint</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="delivery">Delivery and Download</h2>
+  <p>
+    The email presented itself as a Microsoft helpdesk message. It asked the recipient to download a ZIP
+    through a link, extract it, and run &ldquo;missing_dlls.exe&rdquo; to resolve missing DLL issues. The
+    gateway allowed it.
+  </p>
+  <figure>
+    <a href="img/case-010/fig2-phishing-email.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig2-phishing-email.png" width="1586" height="692" loading="lazy" alt="The phishing email with subject Urgent: Download Microsoft DLL Package Now, instructing the user to download and run a DLL package">
+    </a>
+    <figcaption><b>Figure 2.</b>The phishing email: sender presented as helpdesk@microsoft[.]com, sender IP 204.8.156.142, gateway action Allowed.</figcaption>
+  </figure>
+
+  <p>
+    The log-management view shows the Exchange SMTP entry, followed by three OS events on the endpoint. The
+    Sysmon detail behind them gives the download source and the file that was created.
+  </p>
+  <figure>
+    <a href="img/case-010/fig3-log-management.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig3-log-management.png" width="1533" height="216" loading="lazy" alt="Log management rows: an Exchange entry at 14:30:25 followed by OS events at 20:36:12, 20:36:54 and 20:37:29">
+    </a>
+    <figcaption><b>Figure 3.</b>Log management: the Exchange entry at 14:30:25, then OS events at 20:36:12 (download), 20:36:54 (file created) and 20:37:29 (registry write).</figcaption>
+  </figure>
+
+  <h2 id="timeline">Timeline</h2>
+  <div class="callout warn">
+    <span class="k">Timestamps as recorded</span>
+    Times below follow the log-management view. Sysmon&rsquo;s own UtcTime fields read three hours later
+    (the registry write is 23:37:29.155), and the endpoint&rsquo;s clock shows the new account created at
+    11:37:32 PM, about three seconds after that write. The alert&rsquo;s timestamp, 11:37:00 +03:00, matches
+    the 11:37 on the endpoint but not its AM/PM or offset, so it was not used to order events.
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Time</th><th>Event</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Time">2024-03-18 14:30:00</td><td data-label="Event">Phishing email delivered to fiona@letsdefend.io; gateway action Allowed</td><td data-label="Source" class="mono">Email security</td></tr>
+      <tr><td data-label="Time">2024-03-18 14:30:25</td><td data-label="Event">SMTP connection from 204.8.156.142 to the mail server (172.16.20.3:25)</td><td data-label="Source" class="mono">Exchange</td></tr>
+      <tr><td data-label="Time">2024-03-18 20:36:12</td><td data-label="Event">chrome.exe saves Missing_DLL.zip; the Zone.Identifier records the source URL</td><td data-label="Source" class="mono">Sysmon EID 15</td></tr>
+      <tr><td data-label="Time">2024-03-18 20:36:54</td><td data-label="Event">Explorer.EXE creates Missing_DLL.exe in the Downloads folder</td><td data-label="Source" class="mono">Sysmon EID 11</td></tr>
+      <tr><td data-label="Time">2024-03-18 20:37:29</td><td data-label="Event">Missing_DLL.exe sets the (Default) value of the ms-settings command key to the PowerShell command</td><td data-label="Source" class="mono">Sysmon EID 13</td></tr>
+      <tr><td data-label="Time">2024-03-18 23:37:32 (endpoint clock)</td><td data-label="Event">Local account onebl00d created (password last set)</td><td data-label="Source" class="mono">net user output</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="findings">Key Findings</h2>
+  <ul class="findings">
+    <li>A phishing email presented as a Microsoft helpdesk message urged the user to download a &ldquo;DLL package&rdquo; through a link, and the gateway allowed it.</li>
+    <li>The link led to Missing_DLL.zip on an Amazon S3 bucket. Chrome saved it with ZoneId=3 (internet), and Explorer extracted Missing_DLL.exe into the Downloads folder.</li>
+    <li>Missing_DLL.exe wrote a PowerShell command into the (Default) value of HKCU\Software\Classes\ms-settings\Shell\Open\command and launched fodhelper.exe, a UAC bypass that abuses an auto-elevating Microsoft binary.</li>
+    <li>The planted command, run elevated, created the local user onebl00d and added it to the Administrators group.</li>
+    <li>On the endpoint, the registry value is present and onebl00d exists as an active Administrators member with no expiry. At the time of the check, its last logon was Never.</li>
+    <li class="flag">Timestamps do not reconcile across sources: the alert&rsquo;s time (11:37:00 +03:00) does not fit the log-management or Sysmon times, so event order comes from the logs, not the alert.</li>
+  </ul>
+
+  <h2 id="chain">Attack Chain</h2>
+  <div class="chain">
+    <div class="chain-step"><div class="stage">Delivery</div><div class="desc">Phishing email presented as helpdesk@microsoft[.]com, with a link to a &ldquo;DLL package&rdquo;; allowed by the gateway.</div></div>
+    <div class="chain-step"><div class="stage">Download</div><div class="desc">Chrome saves Missing_DLL.zip from an Amazon S3 bucket, and Explorer extracts Missing_DLL.exe into Downloads.</div></div>
+    <div class="chain-step"><div class="stage">Execution</div><div class="desc">The user runs Missing_DLL.exe, as the email instructed.</div></div>
+    <div class="chain-step"><div class="stage">UAC Bypass</div><div class="desc">The sample plants a command in the ms-settings registry key under HKCU, then launches fodhelper.exe with the runas verb.</div></div>
+    <div class="chain-step"><div class="stage">Account Creation</div><div class="desc">Elevated PowerShell runs cmd.exe, which creates the local user onebl00d and adds it to Administrators.</div></div>
+  </div>
+
+  <h2 id="analysis">Malicious File Analysis</h2>
+  <p>
+    fodhelper.exe is a signed Microsoft binary that elevates automatically. When it runs, it reads
+    HKCU\Software\Classes\ms-settings\Shell\Open\command. Settings under HKCU\Software\Classes belong to
+    the current user and can override system-wide ones, so a standard user can plant a command there.
+  </p>
+  <ol class="steps">
+    <li>Missing_DLL.exe writes a PowerShell command into the (Default) value of the ms-settings command key and sets a DelegateExecute value next to it.</li>
+    <li>It launches fodhelper.exe with the runas verb.</li>
+    <li>fodhelper.exe reads the key and runs the planted command instead of opening the Settings app.</li>
+    <li>Because fodhelper.exe is a trusted, auto-elevating binary, the command runs with administrator rights without a UAC prompt.</li>
+    <li>The elevated command runs net user to create onebl00d and net localgroup to add it to Administrators.</li>
+  </ol>
+  <figure>
+    <a href="img/case-010/fig4-decompiled-main.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig4-decompiled-main.png" width="810" height="724" loading="lazy" alt="Decompiled main function of Missing_DLL.exe showing the PowerShell command string, the registry writes to the ms-settings command key and the ShellExecuteExA call to fodhelper.exe">
+    </a>
+    <figcaption><b>Figure 4.</b>Decompiled main() of Missing_DLL.exe: it builds the PowerShell command, writes it to the ms-settings command key under HKCU, then launches fodhelper.exe with the runas verb.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/case-010/fig5-uac-prompt.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig5-uac-prompt.png" width="414" height="240" loading="lazy" alt="A standard Windows User Account Control consent prompt asking whether to allow the app to make changes">
+    </a>
+    <figcaption><b>Figure 5.</b>The UAC consent prompt that a -Verb RunAs request normally triggers. Routing the command through fodhelper.exe avoids it.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/case-010/fig6-process-tree.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig6-process-tree.png" width="873" height="280" loading="lazy" alt="Process tree showing Missing_DLL.exe launching fodhelper.exe, then PowerShell, cmd.exe and net.exe commands that create the user and add it to Administrators">
+    </a>
+    <figcaption><b>Figure 6.</b>Process tree from analysis of the sample: Missing_DLL.exe &rarr; fodhelper.exe &rarr; PowerShell &rarr; cmd.exe &rarr; net.exe / net1.exe, creating the account and adding it to Administrators. The PIDs differ from the endpoint&rsquo;s Sysmon events, so this is a separate execution.</figcaption>
+  </figure>
+
+  <h2 id="validation">Endpoint Validation</h2>
+  <p>
+    Both effects of the sample were checked on the endpoint rather than inferred from the logs alone.
+  </p>
+  <figure>
+    <a href="img/case-010/fig7-registry-key.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig7-registry-key.png" width="772" height="104" loading="lazy" alt="Registry Editor showing the ms-settings Shell Open command key with the Default value set to a PowerShell command that creates a user">
+    </a>
+    <figcaption><b>Figure 7.</b>Registry Editor on the endpoint: the (Default) value under HKCU\Software\Classes\ms-settings\Shell\Open\command holds the PowerShell command, with a DelegateExecute value beside it.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/case-010/fig8-net-user.png" target="_blank" rel="noopener" title="Open full size">
+      <img src="img/case-010/fig8-net-user.png" width="1174" height="522" loading="lazy" alt="Command prompt output of net user onebl00d showing an active account that is a member of the Administrators group with last logon Never">
+    </a>
+    <figcaption><b>Figure 8.</b>net user onebl00d on the endpoint: account active, member of Administrators, password last set 3/18/2024 11:37:32 PM, last logon Never.</figcaption>
+  </figure>
+
+  <h2 id="iocs">Indicators of Compromise</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Type</th><th>Value</th><th>Context</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Type">Email</td><td data-label="Value" class="mono">helpdesk@microsoft[.]com</td><td data-label="Context">Sender as presented in the phishing email</td></tr>
+      <tr><td data-label="Type">IP</td><td data-label="Value" class="mono">204.8.156.142</td><td data-label="Context">Sender IP</td></tr>
+      <tr><td data-label="Type">Subject</td><td data-label="Value" class="mono">Urgent: Download Microsoft DLL Package Now</td><td data-label="Context">Phishing email</td></tr>
+      <tr><td data-label="Type">URL</td><td data-label="Value" class="mono">hxxps://files-ld[.]s3[.]us-east-2[.]amazonaws[.]com/Missing_DLL[.]zip</td><td data-label="Context">Download source of the ZIP</td></tr>
+      <tr><td data-label="Type">File</td><td data-label="Value" class="mono">Missing_DLL.zip</td><td data-label="Context">Archive saved by chrome.exe</td></tr>
+      <tr><td data-label="Type">File</td><td data-label="Value" class="mono">Missing_DLL.exe</td><td data-label="Context">UAC bypass sample, run from the Downloads folder</td></tr>
+      <tr><td data-label="Type">SHA-256</td><td data-label="Value" class="mono">c61c9200d067a246233099eef350cc0ca123603a9f603f6d31fad4f29243b1b7</td><td data-label="Context">File hash from the alert for Missing_DLL.exe</td></tr>
+      <tr><td data-label="Type">Registry key</td><td data-label="Value" class="mono">HKCU\Software\Classes\ms-settings\Shell\Open\command</td><td data-label="Context">(Default) and DelegateExecute values set by the sample</td></tr>
+      <tr><td data-label="Type">Command</td><td data-label="Value" class="mono">powershell.exe /c Start-Process cmd.exe -ArgumentList '/c net user onebl00d pwn3d /add &amp; net localgroup Administrators onebl00d /add' -Verb RunAs</td><td data-label="Context">Value written to the registry key</td></tr>
+      <tr><td data-label="Type">Account</td><td data-label="Value" class="mono">onebl00d</td><td data-label="Context">Local account created and added to Administrators</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="notes">Analyst Notes</h2>
+  <div class="notes-list">
+    <div class="note-line">Started from the alert, where Missing_DLL.exe called fodhelper.exe, and worked backwards to how the file reached the host.</div>
+    <div class="note-line">Matched the Exchange entry to the phishing email, then used the Sysmon file-stream event for the Zone.Identifier, which gave the download URL directly.</div>
+    <div class="note-line">The Sysmon registry event showed the written value, which already contained the full PowerShell command and the account name.</div>
+    <div class="note-line">Decompiled the sample to confirm the registry writes and the runas launch of fodhelper.exe, rather than relying on the registry event alone.</div>
+    <div class="note-line">Checked the registry key and the local account directly on the endpoint, so the outcome did not rest on logs only.</div>
+    <div class="note-line">The process tree in Figure 6 has different PIDs from the endpoint&rsquo;s Sysmon events, so it was used for the shape of the process chain, not to tie events to specific PIDs.</div>
+  </div>
+
+  <footer>
+    <div>case.log &mdash; TRUTH IN ARTIFACTS. CLARITY IN REPORTS.</div>
+    <div><a class="back" href="../index.html#case-studies">&larr; back to portfolio</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
